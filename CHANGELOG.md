@@ -1,7 +1,8 @@
 # Changelog
 
+## v0.30.0 - *2024-11-09*
 
-* now require PHP 7.0.0+
+* now require PHP 8.0.0+
 * fix archive-single-item problem
 * add header/footer search stop condition
 * update languages (`id`, `it`, `pt-br`, `pt-pt`)
