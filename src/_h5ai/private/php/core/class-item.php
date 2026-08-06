@@ -1,7 +1,7 @@
 <?php
 
 class Item {
-    public static function cmp($item1, $item2) {
+    public static function cmp(Item $item1, Item $item2): int {
         if ($item1->is_folder && !$item2->is_folder) {
             return -1;
         }
@@ -12,8 +12,8 @@ class Item {
         return strcasecmp($item1->path, $item2->path);
     }
 
-    public static function get($context, $path, &$cache) {
-        if (!Util::starts_with($path, $context->get_setup()->get('ROOT_PATH'))) {
+    public static function get(Context $context, string $path, &$cache): ?Item {
+        if (!str_starts_with($path, $context->get_setup()->get('ROOT_PATH'))) {
             return null;
         }
 
@@ -29,17 +29,14 @@ class Item {
         return $item;
     }
 
-    public $context;
-    public $path;
-    public $href;
+    public string $path;
+    public string $href;
     public $date;
     public $size;
-    public $is_folder;
-    public $is_content_fetched;
+    public bool $is_folder;
+    public bool $is_content_fetched;
 
-    private function __construct($context, $path) {
-        $this->context = $context;
-
+    private function __construct(public Context $context, string $path) {
         $this->path = Util::normalize_path($path, false);
         $this->is_folder = is_dir($this->path);
         $this->href = $context->to_href($this->path, $this->is_folder);
@@ -48,7 +45,7 @@ class Item {
         $this->is_content_fetched = false;
     }
 
-    public function to_json_object() {
+    public function to_json_object(): array {
         $obj = [
             'href' => $this->href,
             'time' => $this->date * 1000, // seconds (PHP) to milliseconds (JavaScript)
@@ -63,15 +60,15 @@ class Item {
         return $obj;
     }
 
-    public function get_parent(&$cache) {
+    public function get_parent(&$cache): ?Item {
         $parent_path = Util::normalize_path(dirname($this->path), false);
-        if ($parent_path !== $this->path && Util::starts_with($parent_path, $this->context->get_setup()->get('ROOT_PATH'))) {
+        if ($parent_path !== $this->path && str_starts_with($parent_path, $this->context->get_setup()->get('ROOT_PATH'))) {
             return Item::get($this->context, $parent_path, $cache);
         }
         return null;
     }
 
-    public function get_content(&$cache) {
+    public function get_content(&$cache): array {
         $items = [];
 
         if (!$this->context->is_managed_href($this->href)) {

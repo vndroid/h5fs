@@ -1,17 +1,14 @@
 <?php
 
 class Custom {
-    private static $EXTENSIONS = ['html', 'md'];
-    private $context;
+    private const EXTENSIONS = ['html', 'md'];
 
-    public function __construct($context) {
-        $this->context = $context;
-    }
+    public function __construct(private Context $context) {}
 
-    private function read_custom_file($path, $name, &$content, &$type) {
+    private function read_custom_file(string $path, string $name, &$content, &$type): void {
         $file_prefix = $this->context->get_setup()->get('FILE_PREFIX');
 
-        foreach (Custom::$EXTENSIONS as $ext) {
+        foreach (self::EXTENSIONS as $ext) {
             $file = $path . '/' . $file_prefix . '.' . $name . '.' . $ext;
             if (is_readable($file)) {
                 $content = file_get_contents($file);
@@ -21,7 +18,7 @@ class Custom {
         }
     }
 
-    public function get_customizations($href) {
+    public function get_customizations(string $href): array {
         if (!$this->context->query_option('custom.enabled', false)) {
             return [
                 'header' => ['content' => null, 'type' => null],

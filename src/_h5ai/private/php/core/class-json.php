@@ -1,29 +1,29 @@
 <?php
 
 class Json {
-    const SINGLE = 1;
-    const MULTI = 2;
+    private const SINGLE = 1;
+    private const MULTI = 2;
 
-    public static function load($path) {
+    public static function load(string $path): array {
         if (!is_readable($path)) {
             return [];
         }
 
         $json = file_get_contents($path);
-        return Json::decode($json);
+        return Json::decode($json) ?? [];
     }
 
-    public static function save($path, $obj) {
+    public static function save(string $path, $obj): bool {
         $json = json_encode($obj);
         return file_put_contents($path, $json) !== false;
     }
 
-    private static function decode($json) {
-        $json = Json::strip($json);
-        return json_decode($json, true);
+    private static function decode(string $json): ?array {
+        $decoded = json_decode(Json::strip($json), true);
+        return is_array($decoded) ? $decoded : null;
     }
 
-    private static function strip($commented_json) {
+    private static function strip(string $commented_json): string {
         $insideString = false;
         $insideComment = false;
         $json = '';

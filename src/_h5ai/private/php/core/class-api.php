@@ -1,26 +1,27 @@
 <?php
 
 class Api {
-    private $context;
-    private $request;
-    private $setup;
+    private Request $request;
+    private Setup $setup;
 
-    public function __construct($context) {
-        $this->context = $context;
+    public function __construct(private Context $context) {
         $this->request = $context->get_request();
         $this->setup = $context->get_setup();
     }
 
-    public function apply() {
+    public function apply(): void {
         $action = $this->request->query('action');
-        $supported = ['download', 'get', 'login', 'logout'];
-        Util::json_fail(Util::ERR_UNSUPPORTED, 'unsupported action', !in_array($action, $supported));
 
-        $methodname = 'on_' . $action;
-        $this->$methodname();
+        match ($action) {
+            'download' => $this->on_download(),
+            'get' => $this->on_get(),
+            'login' => $this->on_login(),
+            'logout' => $this->on_logout(),
+            default => Util::json_fail(Util::ERR_UNSUPPORTED, 'unsupported action')
+        };
     }
 
-    private function on_download() {
+    private function on_download(): void {
         Util::json_fail(Util::ERR_DISABLED, 'download disabled', !$this->context->query_option('download.enabled', false));
 
         $as = $this->request->query('as');
@@ -41,13 +42,16 @@ class Api {
         exit;
     }
 
-    private function on_get() {
+    private function on_get(): void {
         $response = [];
 
         foreach (['langs', 'options', 'types'] as $name) {
             if ($this->request->query_boolean($name, false)) {
-                $methodname = 'get_' . $name;
-                $response[$name] = $this->context->$methodname();
+                $response[$name] = match ($name) {
+                    'langs' => $this->context->get_langs(),
+                    'options' => $this->context->get_options(),
+                    'types' => $this->context->get_types()
+                };
             }
         }
 
@@ -99,12 +103,12 @@ class Api {
         Util::json_exit($response);
     }
 
-    private function on_login() {
+    private function on_login(): void {
         $pass = $this->request->query('pass');
         Util::json_exit(['asAdmin' => $this->context->login_admin($pass)]);
     }
 
-    private function on_logout() {
+    private function on_logout(): void {
         Util::json_exit(['asAdmin' => $this->context->logout_admin()]);
     }
 }

@@ -1,13 +1,9 @@
 <?php
 
 class Setup {
-    private $store;
-    private $refresh;
+    private array $store = [];
 
-    public function __construct($refresh = false) {
-        $this->store = [];
-        $this->refresh = $refresh;
-
+    public function __construct(private bool $refresh = false) {
         $this->add_globals_and_envs();
         $this->add_php_checks();
         $this->add_app_metadata();
@@ -16,7 +12,7 @@ class Setup {
         $this->add_sys_cmd_checks();
     }
 
-    private function set($key, $value) {
+    private function set(string $key, $value): void {
         if (array_key_exists($key, $this->store)) {
             Logger::log('setup key already taken', [
                 'key' => $key,
@@ -36,7 +32,7 @@ class Setup {
         $this->store[$key] = $value;
     }
 
-    public function get($key) {
+    public function get(string $key) {
         if (!array_key_exists($key, $this->store)) {
             Logger::log('setup key not found', ['key' => $key]);
             exit;
@@ -45,7 +41,7 @@ class Setup {
         return $this->store[$key];
     }
 
-    private function add_globals_and_envs() {
+    private function add_globals_and_envs(): void {
         $this->set('PHP_VERSION', PHP_VERSION);
         $this->set('MIN_PHP_VERSION', MIN_PHP_VERSION);
         $this->set('PHP_ARCH', (PHP_INT_SIZE * 8) . '-bit');
@@ -57,7 +53,7 @@ class Setup {
         $this->set('HTTP_USER_AGENT', $_SERVER['HTTP_USER_AGENT'] ?? '');
     }
 
-    private function add_php_checks() {
+    private function add_php_checks(): void {
         $this->set('HAS_PHP_EXIF', function_exists('exif_thumbnail'));
 
         $has_php_jpeg = false;
@@ -68,13 +64,13 @@ class Setup {
         $this->set('HAS_PHP_JPEG', $has_php_jpeg);
     }
 
-    private function add_app_metadata() {
+    private function add_app_metadata(): void {
         $this->set('NAME', 'h5ai');
         $this->set('VERSION', H5AI_VERSION);
         $this->set('FILE_PREFIX', '_h5ai');
     }
 
-    private function add_server_metadata_and_check() {
+    private function add_server_metadata_and_check(): void {
         $server_software = $this->get('SERVER_SOFTWARE');
         $server_name = null;
         $server_version = null;
@@ -89,14 +85,14 @@ class Setup {
         $this->set('HAS_SERVER', in_array($server_name, ['apache', 'lighttpd', 'nginx', 'cherokee']));
     }
 
-    private function add_paths() {
+    private function add_paths(): void {
         $script_name = $this->get('SCRIPT_NAME');
         if ($this->get('SERVER_NAME') === 'lighttpd') {
             $script_name = preg_replace('#^.*?//#', '/', $script_name);
         }
 
-        $this->set('H5AI_HREF', Util::normalize_path(dirname(dirname($script_name)), true));
-        $this->set('H5AI_PATH', Util::normalize_path(dirname(dirname(dirname(dirname(__FILE__)))), false));
+        $this->set('H5AI_HREF', Util::normalize_path(dirname($script_name, 2), true));
+        $this->set('H5AI_PATH', Util::normalize_path(dirname(__DIR__, 3), false));
 
         $this->set('ROOT_HREF', Util::normalize_path(dirname($this->get('H5AI_HREF')), true));
         $this->set('ROOT_PATH', Util::normalize_path(dirname($this->get('H5AI_PATH')), false));
@@ -115,7 +111,7 @@ class Setup {
         $this->set('HAS_WRITABLE_CACHE_PRV', @is_writable($this->get('CACHE_PRV_PATH')));
     }
 
-    private function add_sys_cmd_checks() {
+    private function add_sys_cmd_checks(): void {
         $cmds_cache_path = Util::normalize_path($this->get('CACHE_PRV_PATH') . '/cmds.json', false);
 
         $cmds = Json::load($cmds_cache_path);
@@ -123,7 +119,7 @@ class Setup {
             $cmds['command'] = Util::exec_0('command -v command');
             $cmds['which'] = Util::exec_0('which which') || Util::exec_0('which which.exe');
 
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            if (PHP_OS_FAMILY === 'Windows') {
                 $cmds['where'] = Util::exec_0('where where.exe');
             }
 
@@ -145,7 +141,7 @@ class Setup {
         }
     }
 
-    public function to_jsono($as_admin = false) {
+    public function to_jsono(bool $as_admin = false): array {
         $keys = [
             'PUBLIC_HREF',
             'ROOT_HREF'

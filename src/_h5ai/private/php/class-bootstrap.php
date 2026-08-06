@@ -1,10 +1,10 @@
 <?php
 
 class Bootstrap {
-    private static $autopaths = ['core', 'ext'];
+    private const AUTOPATHS = ['core', 'ext'];
 
-    public static function run() {
-        spl_autoload_register(['Bootstrap', 'autoload']);
+    public static function run(): void {
+        spl_autoload_register([self::class, 'autoload']);
         putenv('LANG=en_US.UTF-8');
         setlocale(LC_CTYPE, 'en_US.UTF-8');
         date_default_timezone_set(date_default_timezone_get());
@@ -31,14 +31,14 @@ class Bootstrap {
         }
     }
 
-    public static function autoload($class_name) {
+    public static function autoload(string $class_name): void {
         $filename = 'class-' . strtolower($class_name) . '.php';
 
-        foreach (Bootstrap::$autopaths as $path) {
-            $file = __DIR__  . '/' . $path . '/' . $filename;
+        foreach (self::AUTOPATHS as $path) {
+            $file = __DIR__ . '/' . $path . '/' . $filename;
             if (file_exists($file)) {
                 require_once $file;
-                return true;
+                return;
             }
         }
     }

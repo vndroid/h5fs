@@ -1,14 +1,14 @@
 <?php
 
 class Request {
-    private $params;
+    private array $params;
 
-    public function __construct($params, $body) {
+    public function __construct(array $params, string $body) {
         $data = json_decode($body, true);
-        $this->params = $data !== null ? $data : $params;
+        $this->params = is_array($data) ? $data : $params;
     }
 
-    public function query($keypath = '', $default = Util::NO_DEFAULT) {
+    public function query(string $keypath = '', $default = Util::NO_DEFAULT) {
         $value = Util::array_query($this->params, $keypath, Util::NO_DEFAULT);
 
         if ($value === Util::NO_DEFAULT) {
@@ -19,18 +19,18 @@ class Request {
         return $value;
     }
 
-    public function query_boolean($keypath = '', $default = Util::NO_DEFAULT) {
+    public function query_boolean(string $keypath = '', $default = Util::NO_DEFAULT): bool {
         $value = $this->query($keypath, $default);
         return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
-    public function query_numeric($keypath = '', $default = Util::NO_DEFAULT) {
+    public function query_numeric(string $keypath = '', $default = Util::NO_DEFAULT): int {
         $value = $this->query($keypath, $default);
         Util::json_fail(Util::ERR_ILLIGAL_PARAM, 'parameter \'' . $keypath . '\' is not numeric', !is_numeric($value));
-        return intval($value, 10);
+        return (int)$value;
     }
 
-    public function query_array($keypath = '', $default = Util::NO_DEFAULT) {
+    public function query_array(string $keypath = '', $default = Util::NO_DEFAULT): array {
         $value = $this->query($keypath, $default);
         Util::json_fail(Util::ERR_ILLIGAL_PARAM, 'parameter \'' . $keypath . '\' is no array', !is_array($value));
         return $value;
