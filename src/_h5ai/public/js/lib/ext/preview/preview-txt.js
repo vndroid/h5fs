@@ -1,5 +1,5 @@
 const lolight = require('lolight');
-const marked = require('marked');
+const {marked} = require('marked');
 const {keys, dom} = require('../../util');
 const allsettings = require('../../core/settings');
 const preview = require('./preview');
