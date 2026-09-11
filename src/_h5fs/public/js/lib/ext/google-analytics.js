@@ -33,7 +33,7 @@ const init = () => {
     // GA4 配置（可用参数见 https://developers.google.com/analytics/devguides/collection/ga4/reference/config）
     win.gtag('config', settings.id, {
         send_page_view: false, // 禁用自动页面浏览事件
-        coookie_domain: domain, // 设置 cookie 域
+        cookie_domain: domain, // 设置 cookie 域
         cookie_flags: 'SameSite=None; Secure' // 设置 cookie 标志
     });
 
