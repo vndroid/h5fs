@@ -1,13 +1,16 @@
 {
-  "name": "h5ai",
+  "name": "h5fs",
   "version": "0.30.0",
-  "description": "Modern HTTP web server index.",
+  "description": "Modern HTML5 file sharing directory index.",
   "homepage": "https://larsjung.de/h5ai/",
   "author": "Lars Jung <lrsjng@gmail.com> (https://larsjung.de)",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/lrsjng/h5ai.git"
+  },
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
   },
   "scripts": {
     "lint": "eslint .",

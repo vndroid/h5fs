@@ -1,8 +1,8 @@
-# h5ai
+# h5fs
 
 [![license][license-img]][github] [![web][web-img]][web] [![github][github-img]][github]
 
-A modern HTTP web server index for Apache httpd, lighttpd, and nginx.
+A modern HTML5 file sharing directory index for Apache httpd, lighttpd, and nginx.
 
 
 ## Important
@@ -17,11 +17,10 @@ A modern HTTP web server index for Apache httpd, lighttpd, and nginx.
 ## Build
 
 There are installation ready packages for the latest [releases][release] and
-[dev builds][develop]. But to build **h5ai** yourself either `git clone` or
+[dev builds][develop]. But to build **h5fs** yourself either `git clone` or
 download the repository. From within the root folder run the following
 commands to find a fresh zipball in folder `build` (tested on linux only,
-requires [`node 10.0+`][node] to be installed, might work on other
-configurations).
+requires [`Node.js 22.18+ or 24.11+`][node] to be installed).
 
 ~~~sh
 > npm install
@@ -56,8 +55,9 @@ THE SOFTWARE.
 
 ## References
 
-**h5ai** profits from other projects, all of them licensed under the MIT license
-too. Exceptions are some [Material Design icons][material-design-icons] (CC BY 4.0).
+**h5fs** is based on the original **h5ai** project and profits from other projects,
+all of them licensed under the MIT license too. Exceptions are some
+[Material Design icons][material-design-icons] (CC BY 4.0).
 
 
 [web]: https://larsjung.de/h5ai/
