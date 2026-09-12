@@ -134,16 +134,38 @@ class Context {
         return $this->is_managed_path($this->to_path($href));
     }
 
+    private function is_path_within(string $path, string $parent): bool {
+        return $path === $parent || str_starts_with($path, rtrim($parent, '/') . '/');
+    }
+
     public function is_managed_path(string $path): bool {
-        if (!is_dir($path) || str_contains($path, '../') || str_contains($path, '/..') || $path === '..') {
+        $path = realpath($path);
+        $root_path = realpath($this->setup->get('ROOT_PATH'));
+        $public_path = realpath($this->setup->get('PUBLIC_PATH'));
+        $private_path = realpath($this->setup->get('PRIVATE_PATH'));
+
+        if ($path === false || $root_path === false || !is_dir($path)) {
             return false;
         }
 
-        if (str_starts_with($path, $this->setup->get('PUBLIC_PATH'))) {
+        $path = Util::normalize_path($path);
+        $root_path = Util::normalize_path($root_path);
+
+        if (!$this->is_path_within($path, $root_path)) {
             return false;
         }
 
-        if (str_starts_with($path, $this->setup->get('PRIVATE_PATH'))) {
+        if (
+            $public_path !== false
+            && $this->is_path_within($path, Util::normalize_path($public_path))
+        ) {
+            return false;
+        }
+
+        if (
+            $private_path !== false
+            && $this->is_path_within($path, Util::normalize_path($private_path))
+        ) {
             return false;
         }
 
@@ -153,7 +175,7 @@ class Context {
             }
         }
 
-        while ($path !== $this->setup->get('ROOT_PATH')) {
+        while ($path !== $root_path) {
             if (@is_dir($path . '/_h5fs/private/conf')) {
                 return false;
             }
