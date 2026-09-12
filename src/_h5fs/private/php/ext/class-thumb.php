@@ -1,6 +1,8 @@
 <?php
 
 class Thumb {
+    private const MAX_THUMB_DIMENSION = 4096;
+    private const MAX_THUMB_PIXELS = 16777216; // 4096 * 4096
     private const FFMPEG_CMDV = ['ffmpeg', '-ss', '0:00:10', '-i', '[SRC]', '-an', '-vframes', '1', '[DEST]'];
     private const AVCONV_CMDV = ['avconv', '-ss', '0:00:10', '-i', '[SRC]', '-an', '-vframes', '1', '[DEST]'];
     private const CONVERT_CMDV = ['convert', '-density', '200', '-quality', '100', '-strip', '[SRC][0]', '[DEST]'];
@@ -22,6 +24,10 @@ class Thumb {
     }
 
     public function thumb(string $type, string $source_href, int $width, int $height): ?string {
+        if (!$this->has_valid_dimensions($width, $height)) {
+            return null;
+        }
+
         $source_path = $this->context->to_path($source_href);
         if (!file_exists($source_path) || str_starts_with($source_path, $this->setup->get('CACHE_PUB_PATH'))) {
             return null;
@@ -42,6 +48,20 @@ class Thumb {
         };
 
         return $this->thumb_href($capture_path, $width, $height);
+    }
+
+    private function has_valid_dimensions(int $width, int $height): bool {
+        if (
+            $width <= 0
+            || $height < 0
+            || $width > self::MAX_THUMB_DIMENSION
+            || $height > self::MAX_THUMB_DIMENSION
+        ) {
+            return false;
+        }
+
+        // A zero height requests a proportional thumbnail and is bounded by width.
+        return $height === 0 || $width * $height <= self::MAX_THUMB_PIXELS;
     }
 
     private function thumb_href(?string $source_path, int $width, int $height): ?string {
