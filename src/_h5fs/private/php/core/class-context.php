@@ -134,6 +134,14 @@ class Context {
         return $this->is_managed_path($this->to_path($href));
     }
 
+    public function is_managed_file(string $path): bool {
+        $path = realpath($path);
+        return $path !== false
+            && is_file($path)
+            && !$this->is_hidden(basename($path))
+            && $this->is_managed_path(dirname($path));
+    }
+
     private function is_path_within(string $path, string $parent): bool {
         return $path === $parent || str_starts_with($path, rtrim($parent, '/') . '/');
     }

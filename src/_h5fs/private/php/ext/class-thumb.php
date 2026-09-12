@@ -28,8 +28,13 @@ class Thumb {
             return null;
         }
 
-        $source_path = $this->context->to_path($source_href);
-        if (!file_exists($source_path) || str_starts_with($source_path, $this->setup->get('CACHE_PUB_PATH'))) {
+        $requested_path = $this->context->to_path($source_href);
+        $source_path = realpath($requested_path);
+        if (
+            $source_path === false
+            || $this->context->is_hidden(basename($requested_path))
+            || !$this->context->is_managed_file($source_path)
+        ) {
             return null;
         }
 
