@@ -12,7 +12,7 @@ class Setup {
         $this->add_sys_cmd_checks();
     }
 
-    private function set(string $key, $value): void {
+    private function set(string $key, mixed $value): void {
         if (array_key_exists($key, $this->store)) {
             Logger::log('setup key already taken', [
                 'key' => $key,
@@ -32,7 +32,7 @@ class Setup {
         $this->store[$key] = $value;
     }
 
-    public function get(string $key) {
+    public function get(string $key): string|bool {
         if (!array_key_exists($key, $this->store)) {
             Logger::log('setup key not found', ['key' => $key]);
             exit;

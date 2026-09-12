@@ -8,11 +8,11 @@ class Session {
         $this->store = &$store;
     }
 
-    public function set(string $key, $value): void {
+    public function set(string $key, mixed $value): void {
         $this->store[self::KEY_PREFIX . $key] = $value;
     }
 
-    public function get(string $key, $default = null) {
+    public function get(string $key, mixed $default = null): mixed {
         $key = self::KEY_PREFIX . $key;
         return array_key_exists($key, $this->store) ? $this->store[$key] : $default;
     }

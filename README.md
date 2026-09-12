@@ -13,6 +13,8 @@ A modern HTML5 file sharing directory index for Apache httpd, lighttpd, and ngin
   [project page][web].
 * For bug reports and feature requests please use [issues][github-issues].
 
+The server runtime requires PHP 8.2 or later.
+
 
 ## Build
 

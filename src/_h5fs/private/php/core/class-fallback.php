@@ -1,6 +1,6 @@
 <?php
 
-class Fallback {
+readonly class Fallback {
     public function __construct(private Context $context) {}
 
     public function get_html(?string $path = null): string {

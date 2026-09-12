@@ -1,6 +1,6 @@
 <?php
 
-class Theme {
+readonly class Theme {
     private const EXTENSIONS = ['svg', 'png', 'jpg'];
 
     public function __construct(private Context $context) {}

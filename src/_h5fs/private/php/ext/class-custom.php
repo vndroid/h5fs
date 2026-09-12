@@ -1,6 +1,6 @@
 <?php
 
-class Custom {
+readonly class Custom {
     private const EXTENSIONS = ['html', 'md'];
 
     public function __construct(private Context $context) {}

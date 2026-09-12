@@ -1,7 +1,7 @@
 <?php
 
 define('H5FS_VERSION', '{{VERSION}}');
-define('MIN_PHP_VERSION', '8.0.0');
+define('MIN_PHP_VERSION', '8.2.0');
 
 if (version_compare(PHP_VERSION, MIN_PHP_VERSION, '<')) {
     header('Content-type: text/plain;charset=utf-8');

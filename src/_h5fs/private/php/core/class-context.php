@@ -41,7 +41,7 @@ class Context {
         return $this->options;
     }
 
-    public function query_option(string $keypath = '', $default = null) {
+    public function query_option(string $keypath = '', mixed $default = null): mixed {
         return Util::array_query($this->options, $keypath, $default);
     }
 
@@ -49,7 +49,7 @@ class Context {
         return Json::load($this->setup->get('CONF_PATH') . '/types.json');
     }
 
-    public function login_admin(string $pass): bool {
+    public function login_admin(#[\SensitiveParameter] string $pass): bool {
         $this->session->set(self::AS_ADMIN_SESSION_KEY, strcasecmp(hash('sha512', $pass), $this->passhash) === 0);
         return $this->session->get(self::AS_ADMIN_SESSION_KEY);
     }
