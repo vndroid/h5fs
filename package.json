@@ -22,6 +22,7 @@
     "@babel/core": "^8.0.1",
     "@babel/preset-env": "^8.0.2",
     "babel-loader": "^10.1.1",
+    "dompurify": "^3.4.15",
     "eslint": "^10.8.0",
     "ghu": "^0.28.0",
     "glob": "^13.0.6",

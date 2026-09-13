@@ -1,6 +1,6 @@
 const lolight = require('lolight');
 const {marked} = require('marked');
-const {keys, dom} = require('../../util');
+const {keys, dom, sanitizeHtml} = require('../../util');
 const allsettings = require('../../core/settings');
 const preview = require('./preview');
 
@@ -56,7 +56,7 @@ const load = item => {
             if (style === 1) {
                 return dom(preTpl).text(content);
             } else if (style === 2) {
-                return dom(divTpl).html(marked(content));
+                return dom(divTpl).html(sanitizeHtml(marked(content)));
             } else if (style === 3) {
                 const $code = dom('<code></code>').text(content);
                 win.setTimeout(() => {
