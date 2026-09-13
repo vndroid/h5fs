@@ -157,53 +157,59 @@ class Context {
     }
 
     public function is_managed_path(string $path): bool {
+        return $this->resolve_managed_path($path) !== null;
+    }
+
+    public function resolve_managed_path(string $path): ?string {
         $path = realpath($path);
         $root_path = realpath($this->setup->get('ROOT_PATH'));
         $public_path = realpath($this->setup->get('PUBLIC_PATH'));
         $private_path = realpath($this->setup->get('PRIVATE_PATH'));
 
         if ($path === false || $root_path === false || !is_dir($path)) {
-            return false;
+            return null;
         }
 
         $path = Util::normalize_path($path);
         $root_path = Util::normalize_path($root_path);
 
         if (!$this->is_path_within($path, $root_path)) {
-            return false;
+            return null;
         }
 
         if (
             $public_path !== false
             && $this->is_path_within($path, Util::normalize_path($public_path))
         ) {
-            return false;
+            return null;
         }
 
         if (
             $private_path !== false
             && $this->is_path_within($path, Util::normalize_path($private_path))
         ) {
-            return false;
+            return null;
         }
 
         foreach ($this->query_option('view.unmanaged', []) as $name) {
             if (file_exists($path . '/' . $name)) {
-                return false;
+                return null;
             }
         }
 
+        $managed_path = $path;
+
         while ($path !== $root_path) {
             if (@is_dir($path . '/_h5fs/private/conf')) {
-                return false;
+                return null;
             }
             $parent_path = Util::normalize_path(dirname($path));
             if ($parent_path === $path) {
-                return false;
+                return null;
             }
             $path = $parent_path;
         }
-        return true;
+        return $managed_path;
     }
 
     public function get_current_path(): string {

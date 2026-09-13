@@ -26,13 +26,20 @@ readonly class Custom {
             ];
         }
 
-        $root_path = $this->context->get_setup()->get('ROOT_PATH');
-        $path = $this->context->to_path($href);
-
         $header = null;
         $header_type = null;
         $footer = null;
         $footer_type = null;
+
+        $path = $this->context->resolve_managed_path($this->context->to_path($href));
+        if ($path === null) {
+            return [
+                'header' => ['content' => $header, 'type' => $header_type],
+                'footer' => ['content' => $footer, 'type' => $footer_type]
+            ];
+        }
+
+        $root_path = Util::normalize_path(realpath($this->context->get_setup()->get('ROOT_PATH')));
 
         $this->read_custom_file($path, 'header', $header, $header_type);
         $this->read_custom_file($path, 'footer', $footer, $footer_type);
