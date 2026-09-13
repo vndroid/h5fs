@@ -135,11 +135,21 @@ class Context {
     }
 
     public function is_managed_file(string $path): bool {
+        return $this->resolve_managed_file($path) !== null;
+    }
+
+    public function resolve_managed_file(string $path): ?string {
         $path = realpath($path);
-        return $path !== false
-            && is_file($path)
-            && !$this->is_hidden(basename($path))
-            && $this->is_managed_path(dirname($path));
+        if (
+            $path === false
+            || !is_file($path)
+            || $this->is_hidden(basename($path))
+            || !$this->is_managed_path(dirname($path))
+        ) {
+            return null;
+        }
+
+        return Util::normalize_path($path);
     }
 
     private function is_path_within(string $path, string $parent): bool {

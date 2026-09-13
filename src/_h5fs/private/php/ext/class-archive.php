@@ -157,8 +157,15 @@ class Archive {
     }
 
     private function add_file(string $real_file, string $archived_file): void {
-        if (is_readable($real_file)) {
-            $this->files[$real_file] = $archived_file;
+        // Shell archive tools consume the relative archive name after changing
+        // into the base directory, so never allow them to follow a file link.
+        if (is_link($real_file)) {
+            return;
+        }
+
+        $source_path = $this->context->resolve_managed_file($real_file);
+        if ($source_path !== null && is_readable($source_path)) {
+            $this->files[$source_path] = $archived_file;
         }
     }
 
