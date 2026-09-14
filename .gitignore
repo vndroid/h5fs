@@ -3,7 +3,6 @@
 /build-ghu/
 /build-node/
 /coverage/
-/local/
 /node_modules/
 /npm-debug.log
 .DS_Store
