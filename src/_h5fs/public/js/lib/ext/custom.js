@@ -1,5 +1,4 @@
-const marked = require('marked');
-const {each, dom} = require('../util');
+const {each, dom, renderCustomHtml} = require('../util');
 const server = require('../server');
 const event = require('../core/event');
 const allsettings = require('../core/settings');
@@ -13,11 +12,7 @@ const update = (data, key) => {
     const $el = dom(`#content-${key}`);
 
     if (data && data[key].content) {
-        let content = data[key].content;
-        if (data[key].type === 'md') {
-            content = marked(content);
-        }
-        $el.html(content).show();
+        $el.html(renderCustomHtml(data[key].content, data[key].type)).show();
     } else {
         $el.hide();
     }

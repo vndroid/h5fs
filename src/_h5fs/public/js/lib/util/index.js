@@ -3,5 +3,6 @@ module.exports = Object.assign({},
     require('./dom'),
     require('./natural_cmp'),
     require('./misc'),
-    require('./sanitize_html')
+    require('./sanitize_html'),
+    require('./custom_html')
 );
