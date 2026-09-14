@@ -1,6 +1,7 @@
 <?php
 
 class Api {
+    private const DOWNLOAD_TIMEOUT_SECONDS = 300;
     private Request $request;
     private Setup $setup;
 
@@ -31,7 +32,7 @@ class Api {
 
         $archive = new Archive($this->context);
 
-        set_time_limit(0);
+        set_time_limit(self::DOWNLOAD_TIMEOUT_SECONDS);
         session_write_close();
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="' . $as . '"');
