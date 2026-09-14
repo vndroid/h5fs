@@ -1,6 +1,6 @@
 module.exports = [
     {
-        ignores: ['build/**', 'local/**', 'node_modules/**']
+        ignores: ['build/**', 'build-ghu/**', 'build-node/**', 'local/**', 'node_modules/**', 'vendor/**']
     },
     {
         files: ['**/*.js'],
@@ -188,6 +188,17 @@ module.exports = [
             'wrap-iife': [2, 'outside'],
             'wrap-regex': 2,
             yoda: [2, 'never', {exceptRange: true}]
+        }
+    },
+    {
+        files: ['ghu.js'],
+        languageOptions: {
+            globals: {
+                process: 'readonly'
+            }
+        },
+        rules: {
+            'no-process-env': 0
         }
     },
     {

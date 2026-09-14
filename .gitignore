@@ -1,5 +1,7 @@
 /.nyc_output/
 /build/
+/build-ghu/
+/build-node/
 /coverage/
 /local/
 /node_modules/

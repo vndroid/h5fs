@@ -1,0 +1,32 @@
+const Runner = require('./tasks/runner');
+
+module.exports = {
+    Runner,
+    ghu: new Runner(),
+
+    once: require('./util').once,
+
+    concat: require('./actions/concat'),
+    each: require('./actions/each'),
+    hash: require('./actions/hash'),
+    ife: require('./actions/ife'),
+    log: require('./actions/log'),
+    mapfn: require('./actions/mapfn'),
+    newerThan: require('./actions/newer_than'),
+    paths: require('./actions/paths'),
+    read: require('./actions/read'),
+    remove: require('./actions/remove'),
+    run: require('./actions/run'),
+    stats: require('./actions/stats'),
+    wrap: require('./actions/wrap'),
+    write: require('./actions/write'),
+
+    autoprefixer: require('./builtins/autoprefixer'),
+    cssmin: require('./builtins/cssmin'),
+    esbuild: require('./builtins/esbuild'),
+    htmlminifier: require('./builtins/htmlminifier'),
+    jszip: require('./builtins/jszip'),
+    less: require('./builtins/less'),
+    pug: require('./builtins/pug'),
+    uglify: require('./builtins/uglify')
+};
