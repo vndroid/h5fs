@@ -1,6 +1,7 @@
 <?php
 
 class Context {
+    private const MAX_THUMB_REQUESTS = 40;
     private const DEFAULT_PASSHASH = 'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e';
     private const AS_ADMIN_SESSION_KEY = 'AS_ADMIN';
     private const L10N_ISO_CODES = [
@@ -289,11 +290,26 @@ class Context {
     }
 
     public function get_thumbs(array $requests): array {
+        if (count($requests) > self::MAX_THUMB_REQUESTS) {
+            return [];
+        }
+
         $hrefs = [];
 
         foreach ($requests as $req) {
+            if (
+                !is_array($req)
+                || !isset($req['type'], $req['href'], $req['width'], $req['height'])
+                || !is_string($req['type'])
+                || !is_string($req['href'])
+                || !is_numeric($req['width'])
+                || !is_numeric($req['height'])
+            ) {
+                $hrefs[] = null;
+                continue;
+            }
             $thumb = new Thumb($this);
-            $hrefs[] = $thumb->thumb($req['type'], $req['href'], $req['width'], $req['height']);
+            $hrefs[] = $thumb->thumb($req['type'], $req['href'], (int)$req['width'], (int)$req['height']);
         }
 
         return $hrefs;

@@ -86,10 +86,10 @@ class Thumb {
             }
             if($et !== false) {
                 file_put_contents($thumb_path, $et);
-                $image->set_source($thumb_path);
+                $image->set_source($thumb_path, $width, $height);
                 $image->normalize_exif_orientation($source_path);
             } else {
-                $image->set_source($source_path);
+                $image->set_source($source_path, $width, $height);
             }
 
             $image->thumb($width, $height);
@@ -120,6 +120,12 @@ class Thumb {
 }
 
 class Image {
+    private const MAX_SOURCE_BYTES = 33554432; // 32 MiB
+    private const MAX_SOURCE_DIMENSION = 16384;
+    private const MAX_SOURCE_PIXELS = 25000000;
+    private const MEMORY_BYTES_PER_PIXEL = 6;
+    private const MEMORY_SAFETY_BYTES = 16777216; // 16 MiB
+
     private $source_file;
     private $source;
     private $width;
@@ -144,11 +150,20 @@ class Image {
         $this->release_dest();
     }
 
-    public function set_source(?string $filename): void {
+    public function set_source(?string $filename, int $dest_width = 0, int $dest_height = 0): void {
         $this->release_source();
         $this->release_dest();
 
         if ($filename === null) {
+            return;
+        }
+
+        $source_size = @filesize($filename);
+        if (
+            $source_size === false
+            || $source_size <= 0
+            || $source_size > self::MAX_SOURCE_BYTES
+        ) {
             return;
         }
 
@@ -161,7 +176,21 @@ class Image {
         }
         [$this->width, $this->height, $this->type] = $imageInfo;
 
-        $imageData = file_get_contents($this->source_file);
+        $source_pixels = $this->width * $this->height;
+        if (
+            $this->width > self::MAX_SOURCE_DIMENSION
+            || $this->height > self::MAX_SOURCE_DIMENSION
+            || $source_pixels > self::MAX_SOURCE_PIXELS
+            || !$this->has_memory_for_decode($source_size, $source_pixels, $dest_width, $dest_height)
+        ) {
+            $this->source_file = null;
+            $this->width = null;
+            $this->height = null;
+            $this->type = null;
+            return;
+        }
+
+        $imageData = @file_get_contents($this->source_file);
         $image = $imageData !== false ? imagecreatefromstring($imageData) : false;
         if ($image === false) {
             $this->source_file = null;
@@ -171,6 +200,38 @@ class Image {
             return;
         }
         $this->source = $image;
+    }
+
+    private function has_memory_for_decode(int $source_size, int $source_pixels, int $dest_width, int $dest_height): bool {
+        $memory_limit = $this->memory_limit_bytes((string)ini_get('memory_limit'));
+        if ($memory_limit === null) {
+            return true;
+        }
+
+        $dest_pixels = $dest_height === 0
+            ? $dest_width * $dest_width
+            : $dest_width * $dest_height;
+        $estimated = memory_get_usage(true)
+            + $source_size
+            + (($source_pixels + $dest_pixels) * self::MEMORY_BYTES_PER_PIXEL)
+            + self::MEMORY_SAFETY_BYTES;
+        return $estimated <= $memory_limit;
+    }
+
+    private function memory_limit_bytes(string $value): ?int {
+        $value = trim($value);
+        if ($value === '' || $value === '-1') {
+            return null;
+        }
+
+        $unit = strtolower(substr($value, -1));
+        $number = (int)$value;
+        return match ($unit) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => $number
+        };
     }
 
     public function save_dest_jpeg(string $filename, int $quality = 80): void {
