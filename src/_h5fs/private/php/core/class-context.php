@@ -5,7 +5,7 @@ class Context {
     // SHA512 of the empty string, the former preset
     private const DEFAULT_PASSHASH = 'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e';
     private const MAX_PASS_LENGTH = 1024;
-    private const AS_ADMIN_SESSION_KEY = 'AS_ADMIN';
+    public const AS_ADMIN_SESSION_KEY = 'AS_ADMIN';
     private const L10N_ISO_CODES = [
         'af', 'bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'he',
         'hi', 'hr', 'hu', 'id', 'it', 'ja','ko', 'lv', 'nb', 'nl', 'pl',

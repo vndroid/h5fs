@@ -18,7 +18,12 @@ class Bootstrap {
 
         $session = new Session($_SESSION);
         $request = new Request($_REQUEST, file_get_contents('php://input'));
-        $setup = new Setup($request->query_boolean('refresh', false));
+        // Re-checking the system commands runs several shell commands, so
+        // only logged in admins may request it (the info page does).
+        $refresh = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+            && (bool)$session->get(Context::AS_ADMIN_SESSION_KEY, false)
+            && $request->query_boolean('refresh', false);
+        $setup = new Setup($refresh);
         $context = new Context($session, $request, $setup);
 
         if ($context->is_api_request()) {
