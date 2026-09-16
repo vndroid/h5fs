@@ -12,6 +12,7 @@ const createArchive = require('./scripts/lib/archive.cjs');
 const expandIncludes = require('./scripts/lib/include.cjs');
 const includeit = () => each(obj => { obj.content = expandIncludes({file: obj.source, content: obj.content}); });
 const mapper = mapfn.p(SRC, BUILD).s('.less', '.css').s('.pug', '');
+const browserEsbuild = {define: {global: 'window'}};
 
 ghu.defaults('release');
 ghu.before(runtime => {
@@ -36,7 +37,7 @@ ghu.before(runtime => {
 ghu.task('force-production', runtime => { runtime.args.production = true; });
 ghu.task('clean', () => remove(BUILD));
 ghu.task('build:scripts', runtime => read(`${SRC}/_h5fs/public/js/scripts.js`)
-    .then(esbuild({minify: runtime.args.production}))
+    .then(esbuild({...browserEsbuild, minify: runtime.args.production}))
     .then(wrap('\n\n// @include "pre.js"\n\n')).then(includeit())
     .then(wrap(runtime.comment_js)).then(write(mapper, {overwrite: true})));
 ghu.task('build:styles', runtime => read(`${SRC}/_h5fs/public/css/*.less`)
@@ -60,7 +61,7 @@ ghu.task('build:copy', runtime => {
 ghu.task('build:tests', ['build:styles'], () => Promise.all([
     read(`${BUILD}/_h5fs/public/css/styles.css`).then(write(`${BUILD}/test/h5fs-styles.css`, {overwrite: true})),
     read(`${TEST}/index.html`).then(write(`${BUILD}/test/index.html`, {overwrite: true})),
-    read(`${TEST}: index.js`).then(esbuild())
+    read(`${TEST}: index.js`).then(esbuild(browserEsbuild))
         .then(wrap(`\n\n// @include "${SRC}/**/js/pre.js"\n\n`)).then(includeit())
         .then(write(mapfn.p(TEST, `${BUILD}/test`), {overwrite: true}))
 ]));
