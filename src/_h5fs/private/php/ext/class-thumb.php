@@ -3,6 +3,9 @@
 class Thumb {
     private const MAX_THUMB_DIMENSION = 4096;
     private const MAX_THUMB_PIXELS = 16777216; // 4096 * 4096
+    private const DEFAULT_THUMB_SIZE = 100; // same default as the client
+    private const LANDSCAPE_RATIO = 4 / 3; // same ratio as the client
+    private const TOUCH_INTERVAL = 86400; // refresh the LRU time at most once a day
     // [FMT] is the demuxer derived from the file type, forcing it (and only
     // allowing it and the file protocol) prevents ffmpeg from probing the
     // content and opening other demuxers or protocols (e.g. HLS playlists).
@@ -49,6 +52,7 @@ class Thumb {
     private Setup $setup;
     private string $thumbs_path;
     private string $thumbs_href;
+    private ThumbCache $cache;
 
     public function __construct(private Context $context) {
         $this->setup = $context->get_setup();
@@ -58,10 +62,12 @@ class Thumb {
         if (!is_dir($this->thumbs_path)) {
             @mkdir($this->thumbs_path, 0755, true);
         }
+
+        $this->cache = new ThumbCache($context, $this->thumbs_path);
     }
 
     public function thumb(string $type, string $source_href, int $width, int $height): ?string {
-        if (!$this->has_valid_dimensions($width, $height)) {
+        if (!$this->has_valid_dimensions($width, $height) || !$this->is_allowed_size($type, $width, $height)) {
             return null;
         }
 
@@ -110,6 +116,35 @@ class Thumb {
         return $height === 0 || $width * $height <= self::MAX_THUMB_PIXELS;
     }
 
+    /**
+     * Only the sizes the client actually requests with the current settings
+     * are allowed, so the number of cached thumbnails per file is bounded:
+     * square and landscape thumbnails of "thumbnails.size" and proportional
+     * image samples of "preview-img.size".
+     */
+    private function is_allowed_size(string $type, int $width, int $height): bool {
+        $size = $this->positive_int_option('thumbnails.size', self::DEFAULT_THUMB_SIZE);
+        if (
+            $size !== null
+            && $height === $size
+            && ($width === $size || $width === (int)round($size * self::LANDSCAPE_RATIO))
+        ) {
+            return true;
+        }
+
+        if ($type === 'img' && $height === 0 && $this->context->query_option('preview-img.enabled', false) === true) {
+            $sample_size = $this->positive_int_option('preview-img.size', null);
+            return $sample_size !== null && $width === $sample_size;
+        }
+
+        return false;
+    }
+
+    private function positive_int_option(string $keypath, ?int $default): ?int {
+        $value = $this->context->query_option($keypath, $default);
+        return is_int($value) && $value > 0 ? $value : null;
+    }
+
     private function thumb_href(?string $source_path, int $width, int $height): ?string {
         if ($source_path === null || !file_exists($source_path)) {
             return null;
@@ -120,6 +155,10 @@ class Thumb {
         $thumb_href = $this->thumbs_href . '/' . $name;
 
         if (!file_exists($thumb_path) || filemtime($source_path) >= filemtime($thumb_path)) {
+            if (!$this->cache->reserve()) {
+                return null;
+            }
+            $old_size = $this->cache->file_size($thumb_path);
             $image = new Image();
 
             $et = false;
@@ -136,6 +175,11 @@ class Thumb {
 
             $image->thumb($width, $height);
             $image->save_dest_jpeg($thumb_path, 80);
+            unset($image);
+
+            $this->cache->add($this->cache->file_size($thumb_path) - $old_size);
+        } else {
+            $this->touch($thumb_path);
         }
 
         return file_exists($thumb_path) ? $thumb_href : null;
@@ -185,6 +229,10 @@ class Thumb {
         $capture_path = $this->thumbs_path . '/capture-' . sha1($source_path) . '.jpg';
 
         if (!file_exists($capture_path) || filemtime($source_path) >= filemtime($capture_path)) {
+            if (!$this->cache->reserve()) {
+                return null;
+            }
+            $old_size = $this->cache->file_size($capture_path);
             $placeholders = [
                 '[FMT]' => $format,
                 '[SRC]' => $source_path,
@@ -203,9 +251,174 @@ class Thumb {
             }
 
             Util::exec_cmdv($cmdv);
+            clearstatcache(true, $capture_path);
+
+            $this->cache->add($this->cache->file_size($capture_path) - $old_size);
+        } else {
+            $this->touch($capture_path);
         }
 
         return file_exists($capture_path) ? $capture_path : null;
+    }
+
+    /**
+     * Keeps the modification time of used cache files fresh (at most once a
+     * day) so the cache cleanup removes the least recently used files first.
+     */
+    private function touch(string $path): void {
+        $mtime = @filemtime($path);
+        if ($mtime !== false && time() - $mtime > self::TOUCH_INTERVAL) {
+            @touch($path);
+        }
+    }
+}
+
+/**
+ * Bounds the disk usage of the thumbnail cache ("thumbnails.maxCacheSize",
+ * in MiB). The current usage is tracked in a small state file in the private
+ * cache folder; once the limit is exceeded the least recently used files are
+ * removed until the usage drops below 80% of the limit.
+ */
+class ThumbCache {
+    private const DEFAULT_MAX_CACHE_MIB = 512;
+    private const CLEANUP_TARGET_RATIO = 0.8;
+    private const STATE_FILE = 'thumbs-usage.json';
+    private const FILE_PATTERN = '/^(thumb|capture)-[0-9a-f]{40}(-\d+x\d+)?\.jpg$/';
+
+    private string $state_path;
+    private int $max_bytes;
+
+    public function __construct(Context $context, private string $thumbs_path) {
+        $setup = $context->get_setup();
+        $state_dir = $setup->get('HAS_WRITABLE_CACHE_PRV') ? $setup->get('CACHE_PRV_PATH') : $thumbs_path;
+        $this->state_path = $state_dir . '/' . ($state_dir === $thumbs_path ? '.' : '') . self::STATE_FILE;
+
+        $max_mib = $context->query_option('thumbnails.maxCacheSize', self::DEFAULT_MAX_CACHE_MIB);
+        if (!is_int($max_mib) || $max_mib <= 0) {
+            $max_mib = self::DEFAULT_MAX_CACHE_MIB;
+        }
+        $this->max_bytes = $max_mib * 1024 * 1024;
+    }
+
+    public function file_size(string $path): int {
+        clearstatcache(true, $path);
+        $size = @filesize($path);
+        return $size === false ? 0 : $size;
+    }
+
+    /**
+     * Returns false if no new cache file may be written right now, since the
+     * cache is full and could not be cleaned up.
+     */
+    public function reserve(): bool {
+        return $this->with_state(function (int $usage): array {
+            if ($usage >= $this->max_bytes) {
+                $usage = $this->cleanup();
+            }
+            return [$usage, $usage < $this->max_bytes];
+        });
+    }
+
+    public function add(int $bytes): void {
+        if ($bytes === 0) {
+            return;
+        }
+        $this->with_state(function (int $usage) use ($bytes): array {
+            $usage = max(0, $usage + $bytes);
+            if ($usage > $this->max_bytes) {
+                $usage = $this->cleanup();
+            }
+            return [$usage, true];
+        });
+    }
+
+    /**
+     * Runs $fn with the current usage while holding an exclusive lock on the
+     * state file. $fn returns [new usage, result].
+     */
+    private function with_state(callable $fn): bool {
+        $handle = @fopen($this->state_path, 'c+');
+        if ($handle === false) {
+            // Without a state file the usage can't be tracked, fail closed.
+            return false;
+        }
+
+        try {
+            if (!@flock($handle, LOCK_EX)) {
+                return false;
+            }
+
+            $data = json_decode((string)stream_get_contents($handle), true);
+            $usage = is_array($data) && isset($data['bytes']) && is_int($data['bytes'])
+                ? $data['bytes']
+                : $this->scan_usage();
+
+            [$usage, $result] = $fn($usage);
+
+            ftruncate($handle, 0);
+            rewind($handle);
+            fwrite($handle, json_encode(['bytes' => $usage]));
+            fflush($handle);
+
+            return $result;
+        } finally {
+            @flock($handle, LOCK_UN);
+            fclose($handle);
+        }
+    }
+
+    private function list_files(): array {
+        $files = [];
+        $dir = @opendir($this->thumbs_path);
+        if ($dir === false) {
+            return $files;
+        }
+        while (($name = readdir($dir)) !== false) {
+            if (!preg_match(self::FILE_PATTERN, $name)) {
+                continue;
+            }
+            $path = $this->thumbs_path . '/' . $name;
+            $stat = @stat($path);
+            if ($stat !== false) {
+                $files[$path] = [$stat['mtime'], $stat['size']];
+            }
+        }
+        closedir($dir);
+        return $files;
+    }
+
+    private function scan_usage(): int {
+        $usage = 0;
+        foreach ($this->list_files() as [$mtime, $size]) {
+            $usage += $size;
+        }
+        return $usage;
+    }
+
+    /**
+     * Removes the least recently used files until the usage is below the
+     * cleanup target and returns the new usage.
+     */
+    private function cleanup(): int {
+        $files = $this->list_files();
+        $usage = 0;
+        foreach ($files as [$mtime, $size]) {
+            $usage += $size;
+        }
+
+        uasort($files, fn($a, $b) => $a[0] <=> $b[0]);
+
+        $target = (int)($this->max_bytes * self::CLEANUP_TARGET_RATIO);
+        foreach ($files as $path => [$mtime, $size]) {
+            if ($usage <= $target) {
+                break;
+            }
+            if (@unlink($path)) {
+                $usage -= $size;
+            }
+        }
+
+        return $usage;
     }
 }
 
