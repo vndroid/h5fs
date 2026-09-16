@@ -3,10 +3,47 @@
 class Thumb {
     private const MAX_THUMB_DIMENSION = 4096;
     private const MAX_THUMB_PIXELS = 16777216; // 4096 * 4096
-    private const FFMPEG_CMDV = ['ffmpeg', '-ss', '0:00:10', '-i', '[SRC]', '-an', '-vframes', '1', '[DEST]'];
-    private const AVCONV_CMDV = ['avconv', '-ss', '0:00:10', '-i', '[SRC]', '-an', '-vframes', '1', '[DEST]'];
-    private const CONVERT_CMDV = ['convert', '-density', '200', '-quality', '100', '-strip', '[SRC][0]', '[DEST]'];
-    private const GM_CONVERT_CMDV = ['gm', 'convert', '-density', '200', '-quality', '100', '[SRC][0]', '[DEST]'];
+    // [FMT] is the demuxer derived from the file type, forcing it (and only
+    // allowing it and the file protocol) prevents ffmpeg from probing the
+    // content and opening other demuxers or protocols (e.g. HLS playlists).
+    private const FFMPEG_CMDV = [
+        'ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error', '-y',
+        '-protocol_whitelist', 'file', '-format_whitelist', '[FMT]', '-f', '[FMT]',
+        '-ss', '0:00:10', '-i', '[SRC]',
+        '-an', '-frames:v', '1', '-f', 'image2', '-update', '1', '[DEST]'
+    ];
+    private const AVCONV_CMDV = ['avconv', '-nostdin', '-y', '-f', '[FMT]', '-ss', '0:00:10', '-i', '[SRC]', '-an', '-vframes', '1', '[DEST]'];
+    // [FMT] is an explicit ImageMagick/GraphicsMagick coder, so the input is
+    // never auto-detected from its content (e.g. MVG, SVG, MSL, ...).
+    private const CONVERT_CMDV = ['convert', '-density', '200', '-quality', '100', '-strip', '[FMT]:[SRC][0]', 'jpg:[DEST]'];
+    private const GM_CONVERT_CMDV = ['gm', 'convert', '-density', '200', '-quality', '100', '[FMT]:[SRC][0]', 'jpg:[DEST]'];
+    private const TIMEOUT_CMDV = ['timeout', '-k', '5', '[SECONDS]'];
+    private const CAPTURE_TIMEOUT_SECONDS = 60;
+
+    private const DEFAULT_CATEGORY_TYPES = [
+        'img' => ['img-bmp', 'img-gif', 'img-ico', 'img-jpg', 'img-png'],
+        'mov' => ['vid-avi', 'vid-flv', 'vid-mkv', 'vid-mov', 'vid-mp4', 'vid-mpg', 'vid-webm'],
+        'doc' => ['x-pdf', 'x-ps']
+    ];
+    // file type => ffmpeg demuxer
+    private const MOV_FORMATS = [
+        'vid-avi' => 'avi',
+        'vid-flv' => 'flv',
+        'vid-mkv' => 'matroska',
+        'vid-mov' => 'mov',
+        'vid-mp4' => 'mov',
+        'vid-mpg' => 'mpeg',
+        'vid-ts' => 'mpegts',
+        'vid-vob' => 'mpeg',
+        'vid-webm' => 'matroska',
+        'vid-wmv' => 'asf'
+    ];
+    // file type => ImageMagick/GraphicsMagick coder
+    private const DOC_FORMATS = [
+        'x-pdf' => 'pdf',
+        'x-ps' => 'ps',
+        'x-eps' => 'eps'
+    ];
     private const THUMB_CACHE = 'thumbs';
 
     private Setup $setup;
@@ -37,17 +74,22 @@ class Thumb {
             return null;
         }
 
-        $capture_path = match ($type) {
-            'mov' => match (true) {
-                (bool)$this->setup->get('HAS_CMD_AVCONV') => $this->capture(self::AVCONV_CMDV, $source_path),
-                (bool)$this->setup->get('HAS_CMD_FFMPEG') => $this->capture(self::FFMPEG_CMDV, $source_path),
-                default => $source_path
-            },
-            'doc' => match (true) {
-                (bool)$this->setup->get('HAS_CMD_CONVERT') => $this->capture(self::CONVERT_CMDV, $source_path),
-                (bool)$this->setup->get('HAS_CMD_GM') => $this->capture(self::GM_CONVERT_CMDV, $source_path),
-                default => $source_path
-            },
+        // Never trust the type sent by the client: derive it from the name of
+        // the requested entry and of the real file (for symbolic links) with
+        // the server side types and thumbnail settings. Both have to agree.
+        $file_type = $this->context->get_file_type(basename($source_path));
+        $category = $this->get_category($file_type);
+        if (
+            $category === null
+            || $category !== $type
+            || $this->context->get_file_type(basename($requested_path)) !== $file_type
+        ) {
+            return null;
+        }
+
+        $capture_path = match ($category) {
+            'mov' => $this->capture_mov($file_type, $source_path),
+            'doc' => $this->capture_doc($file_type, $source_path),
             default => $source_path
         };
 
@@ -99,7 +141,43 @@ class Thumb {
         return file_exists($thumb_path) ? $thumb_href : null;
     }
 
-    private function capture(array $cmdv, string $source_path): ?string {
+    private function get_category(string $file_type): ?string {
+        foreach (self::DEFAULT_CATEGORY_TYPES as $category => $default_types) {
+            $types = $this->context->query_option('thumbnails.' . $category, $default_types);
+            if (is_array($types) && in_array($file_type, $types, true)) {
+                return $category;
+            }
+        }
+        return null;
+    }
+
+    private function capture_mov(string $file_type, string $source_path): ?string {
+        $format = self::MOV_FORMATS[$file_type] ?? null;
+        if ($format === null) {
+            return null;
+        }
+
+        return match (true) {
+            (bool)$this->setup->get('HAS_CMD_FFMPEG') => $this->capture(self::FFMPEG_CMDV, $source_path, $format),
+            (bool)$this->setup->get('HAS_CMD_AVCONV') => $this->capture(self::AVCONV_CMDV, $source_path, $format),
+            default => null
+        };
+    }
+
+    private function capture_doc(string $file_type, string $source_path): ?string {
+        $format = self::DOC_FORMATS[$file_type] ?? null;
+        if ($format === null) {
+            return null;
+        }
+
+        return match (true) {
+            (bool)$this->setup->get('HAS_CMD_CONVERT') => $this->capture(self::CONVERT_CMDV, $source_path, $format),
+            (bool)$this->setup->get('HAS_CMD_GM') => $this->capture(self::GM_CONVERT_CMDV, $source_path, $format),
+            default => null
+        };
+    }
+
+    private function capture(array $cmdv, string $source_path, string $format): ?string {
         if (!file_exists($source_path)) {
             return null;
         }
@@ -107,9 +185,21 @@ class Thumb {
         $capture_path = $this->thumbs_path . '/capture-' . sha1($source_path) . '.jpg';
 
         if (!file_exists($capture_path) || filemtime($source_path) >= filemtime($capture_path)) {
-            foreach ($cmdv as &$arg) {
-                $arg = str_replace('[SRC]', $source_path, $arg);
-                $arg = str_replace('[DEST]', $capture_path, $arg);
+            $placeholders = [
+                '[FMT]' => $format,
+                '[SRC]' => $source_path,
+                '[DEST]' => $capture_path
+            ];
+            // replace all placeholders in one pass, so placeholder-like
+            // sequences in file names are never substituted
+            $cmdv = array_map(fn($arg) => strtr($arg, $placeholders), $cmdv);
+
+            if (PHP_OS_FAMILY !== 'Windows' && $this->setup->get('HAS_CMD_TIMEOUT')) {
+                $timeout_cmdv = array_map(
+                    fn($arg) => strtr($arg, ['[SECONDS]' => (string)self::CAPTURE_TIMEOUT_SECONDS]),
+                    self::TIMEOUT_CMDV
+                );
+                $cmdv = array_merge($timeout_cmdv, $cmdv);
             }
 
             Util::exec_cmdv($cmdv);

@@ -13,6 +13,7 @@ class Context {
 
     private array $options;
     private string $passhash;
+    private ?array $type_regexps = null;
 
     public function __construct(
         private Session $session,
@@ -48,6 +49,39 @@ class Context {
 
     public function get_types(): array {
         return Json::load($this->setup->get('CONF_PATH') . '/types.json');
+    }
+
+    /**
+     * Server side equivalent of the client's `types.getType()`: matches a
+     * file name against the glob patterns of "types.json" (case insensitive,
+     * the last matching type wins).
+     */
+    public function get_file_type(string $name): string {
+        if ($this->type_regexps === null) {
+            $this->type_regexps = [];
+            foreach ($this->get_types() as $type => $patterns) {
+                if (!is_string($type) || !is_array($patterns) || count($patterns) === 0) {
+                    continue;
+                }
+                $parts = [];
+                foreach ($patterns as $pattern) {
+                    if (is_string($pattern)) {
+                        $parts[] = '(' . str_replace('\\*', '.*', preg_quote($pattern, '/')) . ')';
+                    }
+                }
+                if (count($parts) > 0) {
+                    $this->type_regexps[$type] = '/^(' . implode('|', $parts) . ')$/is';
+                }
+            }
+        }
+
+        $result = 'file';
+        foreach ($this->type_regexps as $type => $regexp) {
+            if (preg_match($regexp, $name) === 1) {
+                $result = $type;
+            }
+        }
+        return $result;
     }
 
     public function login_admin(#[\SensitiveParameter] string $pass): bool {

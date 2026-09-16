@@ -363,9 +363,13 @@
     Show thumbnails for image files. Needs the "/_h5fs/public/cache" folder to be
     writable for the web Server.
 
-    - img: array of strings
-    - mov: array of strings
-    - doc: array of strings
+    - img: array of strings, file types (see "types.json") rendered with PHP GD
+    - mov: array of strings, file types captured with ffmpeg/avconv, supported:
+        vid-avi, vid-flv, vid-mkv, vid-mov, vid-mp4, vid-mpg, vid-ts, vid-vob, vid-webm, vid-wmv
+    - doc: array of strings, file types captured with ImageMagick/GraphicsMagick, supported:
+        x-pdf, x-ps, x-eps
+      The thumbnail type is always derived on the server from the file name,
+      files are only passed to these tools with an explicit input format.
     - delay: number, delay in milliseconds after "dom-ready" before thumb-requesting starts
     - size: number, size in pixel of the generated thumbnails
     - exif: boolean, use included EXIF thumbs if possible

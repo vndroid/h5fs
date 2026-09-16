@@ -115,8 +115,12 @@ class Setup {
     private function add_sys_cmd_checks(): void {
         $cmds_cache_path = Util::normalize_path($this->get('CACHE_PRV_PATH') . '/cmds.json', false);
 
+        $checked_cmds = ['avconv', 'convert', 'du', 'ffmpeg', 'gm', 'tar', 'timeout', 'zip'];
+
         $cmds = Json::load($cmds_cache_path);
-        if (count($cmds) === 0 || $this->refresh) {
+        $is_stale = count(array_diff($checked_cmds, array_keys($cmds))) > 0;
+        if (count($cmds) === 0 || $is_stale || $this->refresh) {
+            $cmds = [];
             $cmds['command'] = Util::exec_0('command -v command');
             $cmds['which'] = Util::exec_0('which which') || Util::exec_0('which which.exe');
 
@@ -131,7 +135,7 @@ class Setup {
                 $cmd = 'which';
             }
 
-            foreach (['avconv', 'convert', 'du', 'ffmpeg', 'gm', 'tar', 'zip'] as $c) {
+            foreach ($checked_cmds as $c) {
                 $cmds[$c] = ($cmd !== false) && (Util::exec_0($cmd . ' ' . $c) || Util::exec_0($cmd . ' ' . $c . '.exe'));
             }
 
