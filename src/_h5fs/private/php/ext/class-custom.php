@@ -9,13 +9,38 @@ readonly class Custom {
         $file_prefix = $this->context->get_setup()->get('FILE_PREFIX');
 
         foreach (self::EXTENSIONS as $ext) {
-            $file = $path . '/' . $file_prefix . '.' . $name . '.' . $ext;
-            if (is_readable($file)) {
-                $content = file_get_contents($file);
-                $type = $ext;
-                return;
+            $file_name = $file_prefix . '.' . $name . '.' . $ext;
+            $file = $this->resolve_custom_file($path . '/' . $file_name, $file_name);
+            if ($file !== null) {
+                $data = @file_get_contents($file);
+                if ($data !== false) {
+                    $content = $data;
+                    $type = $ext;
+                    return;
+                }
             }
         }
+    }
+
+    /**
+     * Resolves a custom file (which might be a symbolic link) and only
+     * returns it if the real file is inside a managed folder. The target
+     * must either be a custom file itself (those are usually hidden by the
+     * "^_h5fs" rule) or a regular visible file, so links can't be used to
+     * read files outside of the root or hidden files and folders.
+     */
+    private function resolve_custom_file(string $file, string $file_name): ?string {
+        $real_file = realpath($file);
+        if ($real_file === false || !is_file($real_file) || !is_readable($real_file)) {
+            return null;
+        }
+        $real_file = Util::normalize_path($real_file);
+
+        if (basename($real_file) === $file_name) {
+            return $this->context->resolve_managed_path(dirname($real_file)) !== null ? $real_file : null;
+        }
+
+        return $this->context->resolve_managed_file($real_file);
     }
 
     public function get_customizations(string $href): array {
