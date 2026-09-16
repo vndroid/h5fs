@@ -34,6 +34,9 @@ class Archive {
     public function __construct(private Context $context) {}
 
     public function output(string $type, string $base_href, $hrefs): bool {
+        if (self::has_dot_segments($base_href)) {
+            return false;
+        }
         $this->base_path = $this->context->to_path($base_href);
         if (!$this->context->is_managed_path($this->base_path)) {
             return false;
@@ -51,13 +54,14 @@ class Archive {
             $this->aborted = false;
             $this->deadline = hrtime(true) + self::MAX_SCAN_DURATION_NS;
 
-            $this->add_hrefs($hrefs);
+            $requested = $this->add_hrefs($hrefs);
 
-            if (count($this->dirs) === 0 && count($this->files) === 0 && !$this->aborted) {
-                $this->add_dir($this->base_path, $type === 'php-tar' ? '/' : '.', 0);
+            if ($requested === 0 && !$this->aborted) {
+                // nothing selected: download the whole base folder
+                $this->add_dir($this->base_path, '.', 0);
             }
 
-            if ($this->aborted) {
+            if ($this->aborted || (count($this->dirs) === 0 && count($this->files) === 0)) {
                 return false;
             }
 
@@ -308,6 +312,9 @@ class Archive {
     }
 
     private function php_tar_header(string $filename, int $size, $mtime, int $type): string {
+        if (str_starts_with($filename, './')) {
+            $filename = substr($filename, 2);
+        }
         $name = substr(basename($filename), -99);
         $prefix = substr(Util::normalize_path(dirname($filename)), -154);
         if ($prefix === '.') {
@@ -358,13 +365,27 @@ class Archive {
         return $ok;
     }
 
-    private function add_hrefs($hrefs): void {
+    /**
+     * Adds the selected entries and returns the number of non-empty hrefs
+     * the client sent. Entries are archived with their path relative to the
+     * base folder; entries outside of it are rejected, so archive entries
+     * never contain absolute server paths or "..".
+     */
+    private function add_hrefs($hrefs): int {
         if (!is_array($hrefs)) {
             $hrefs = [$hrefs];
         }
 
+        $base_prefix = Util::normalize_path($this->base_path, true);
+        $requested = 0;
+
         foreach ($hrefs as $href) {
             if (!is_string($href) || trim($href) === '') {
+                continue;
+            }
+            $requested += 1;
+
+            if (self::has_dot_segments($href)) {
                 continue;
             }
 
@@ -372,22 +393,72 @@ class Archive {
             $d = dirname($href);
             $n = basename($href);
 
-            if ($this->context->is_managed_href($d) && !$this->context->is_hidden($n)) {
+            if (!$this->context->is_managed_href($d) || $this->context->is_hidden($n)) {
+                continue;
+            }
 
-                $real_file = $this->context->to_path($href);
-                $archived_file = preg_replace('!^' . preg_quote(Util::normalize_path($this->base_path, true)) . '!', '', $real_file);
+            $real_file = $this->context->to_path($href);
+            if (!str_starts_with($real_file, $base_prefix)) {
+                continue;
+            }
+            $archived_file = substr($real_file, strlen($base_prefix));
+            if (!self::is_safe_archive_name($archived_file)) {
+                continue;
+            }
 
-                if (is_dir($real_file)) {
-                    $this->add_dir($real_file, $archived_file, 0);
-                } else {
-                    $this->add_file($real_file, $archived_file);
-                }
+            if (is_dir($real_file)) {
+                $this->add_dir($real_file, $archived_file, 0);
+            } else {
+                $this->add_file($real_file, $archived_file);
             }
         }
+
+        return $requested;
+    }
+
+    /**
+     * True if the (raw or url-encoded) href contains "." or ".." segments.
+     */
+    private static function has_dot_segments(string $href): bool {
+        foreach (preg_split('#[\\\\/]+#', rawurldecode($href)) as $segment) {
+            if ($segment === '.' || $segment === '..') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Archive entry names must be relative and must not leave the archive
+     * root; "." is the archive root itself.
+     */
+    private static function is_safe_archive_name(string $name): bool {
+        if ($name === '.') {
+            return true;
+        }
+        if (
+            $name === ''
+            || str_contains($name, "\0")
+            || str_starts_with($name, '/')
+            || str_contains($name, '\\')
+            || preg_match('#^[A-Za-z]:#', $name)
+        ) {
+            return false;
+        }
+        $segments = explode('/', $name);
+        if ($segments[0] === '.') {
+            array_shift($segments);
+        }
+        foreach ($segments as $segment) {
+            if ($segment === '' || $segment === '.' || $segment === '..') {
+                return false;
+            }
+        }
+        return true;
     }
 
     private function add_file(string $real_file, string $archived_file): void {
-        if ($this->quota_exceeded()) {
+        if ($this->quota_exceeded() || !self::is_safe_archive_name($archived_file)) {
             return;
         }
 
@@ -419,6 +490,9 @@ class Archive {
     private function add_dir(string $real_dir, string $archived_dir, int $depth): void {
         if ($this->quota_exceeded() || $depth > self::MAX_DEPTH) {
             $this->aborted = true;
+            return;
+        }
+        if (!self::is_safe_archive_name($archived_dir)) {
             return;
         }
 
