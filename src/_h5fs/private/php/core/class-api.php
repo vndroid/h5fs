@@ -39,7 +39,9 @@ class Api {
         header('Connection: close');
         $ok = $archive->output($type, $base_href, $hrefs);
 
-        Util::json_fail(Util::ERR_FAILED, 'packaging failed', !$ok);
+        // Once archive data has been sent an error can't be reported as JSON
+        // anymore, the client just receives a truncated download.
+        Util::json_fail(Util::ERR_FAILED, 'packaging failed', !$ok && !$archive->has_started_output());
         exit;
     }
 

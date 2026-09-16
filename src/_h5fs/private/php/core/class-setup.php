@@ -51,6 +51,7 @@ class Setup {
         $this->set('SCRIPT_NAME', $_SERVER['SCRIPT_NAME'] ?? '');
         $this->set('SERVER_SOFTWARE', $_SERVER['SERVER_SOFTWARE'] ?? '');
         $this->set('HTTP_USER_AGENT', $_SERVER['HTTP_USER_AGENT'] ?? '');
+        $this->set('REMOTE_ADDR', (string)($_SERVER['REMOTE_ADDR'] ?? ''));
     }
 
     private function add_php_checks(): void {

@@ -125,12 +125,24 @@
     - type: string, "php-tar", "shell-tar" or "shell-zip"
     - packageName: string, basename of the download package, null for current filename or foldername
     - alwaysVisible: boolean, always show download button (defaults to download the current folder)
+    - maxConcurrent: number, max number of downloads running at the same time
+    - maxConcurrentPerClient: number, max number of simultaneous downloads per client address
+        (IPv6 clients are grouped by /64; behind a reverse proxy all clients share
+        the proxy's address unless the web server restores the real client address)
+    - maxDuration: number, max duration of a single download in seconds
+    - minRate: number, abort downloads that are consumed slower than this (bytes per second), 0 to disable
+    - minRateGrace: number, seconds before minRate is enforced
     */
     "download": {
         "enabled": true,
         "type": "php-tar",
         "packageName": null,
-        "alwaysVisible": false
+        "alwaysVisible": false,
+        "maxConcurrent": 4,
+        "maxConcurrentPerClient": 1,
+        "maxDuration": 3600,
+        "minRate": 32768,
+        "minRateGrace": 30
     },
 
     /*

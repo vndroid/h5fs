@@ -6,8 +6,15 @@ class Archive {
     private const MAX_DEPTH = 32;
     private const MAX_TOTAL_BYTES = 2147483648; // 2 GiB
     private const MAX_SCAN_DURATION_NS = 2000000000; // 2 seconds
+    private const DEFAULT_MAX_CONCURRENT = 4;
+    private const DEFAULT_MAX_CONCURRENT_PER_CLIENT = 1;
+    private const DEFAULT_MAX_DURATION = 3600; // seconds
+    private const DEFAULT_MIN_RATE = 32768; // bytes per second
+    private const DEFAULT_MIN_RATE_GRACE = 30; // seconds
+    private const CLIENT_BUCKETS = 256;
+    private const MAX_SLOTS = 64;
+    private const STREAM_CHUNK_SIZE = 65536; // 64 KiB
     private const NULL_BYTE = "\0";
-    private const SEGMENT_SIZE = 16777216;  // 1024 * 1024 * 16 = 16MiB
     private const TAR_PASSTHRU_CMD = 'cd [ROOTDIR] && tar --no-recursion -c -- [DIRS] [FILES]';
     private const ZIP_PASSTHRU_CMD = 'cd [ROOTDIR] && zip - -- [FILES]';
 
@@ -17,7 +24,12 @@ class Archive {
     private int $total_bytes = 0;
     private int $deadline = 0;
     private bool $aborted = false;
-    private $lock_handle = null;
+    /** @var resource[] */
+    private array $lock_handles = [];
+    private bool $output_started = false;
+    private bool $stream_aborted = false;
+    private int $stream_started_ns = 0;
+    private int $stream_bytes = 0;
 
     public function __construct(private Context $context) {}
 
@@ -27,9 +39,10 @@ class Archive {
             return false;
         }
 
-        if (!$this->acquire_lock()) {
+        if (!$this->acquire_slots()) {
             return false;
         }
+        register_shutdown_function([$this, 'release_slots']);
 
         try {
             $this->dirs = [];
@@ -55,25 +68,151 @@ class Archive {
                 default => false
             };
         } finally {
-            $this->release_lock();
+            $this->release_slots();
         }
     }
 
-    private function acquire_lock(): bool {
+    /**
+     * True once archive bytes have been sent, i.e. it is too late to report
+     * an error as JSON (the download is truncated instead).
+     */
+    public function has_started_output(): bool {
+        return $this->output_started;
+    }
+
+    /**
+     * Limits concurrent downloads with a small number of lock "slots" instead
+     * of a single global lock, so one (slow) client cannot block everybody:
+     * every download needs one of the per-client slots of its client bucket
+     * and one of the global slots.
+     */
+    private function acquire_slots(): bool {
+        $lock_dir = $this->get_lock_dir();
+        $lock_prefix = $lock_dir . '/h5fs-archive-' . substr(sha1($this->get_root_id()), 0, 12);
+
+        $max_concurrent = min(self::MAX_SLOTS, $this->int_option('download.maxConcurrent', self::DEFAULT_MAX_CONCURRENT, 1));
+        $max_per_client = $this->int_option('download.maxConcurrentPerClient', self::DEFAULT_MAX_CONCURRENT_PER_CLIENT, 1);
+        $bucket = $this->get_client_bucket();
+
+        if (
+            !$this->acquire_one_slot($lock_prefix . '-client-' . $bucket . '-', min($max_per_client, $max_concurrent))
+            || !$this->acquire_one_slot($lock_prefix . '-slot-', $max_concurrent)
+        ) {
+            $this->release_slots();
+            return false;
+        }
+        return true;
+    }
+
+    private function acquire_one_slot(string $prefix, int $count): bool {
+        for ($i = 0; $i < $count; $i += 1) {
+            $handle = @fopen($prefix . $i . '.lock', 'c');
+            if ($handle === false) {
+                continue;
+            }
+            if (@flock($handle, LOCK_EX | LOCK_NB)) {
+                $this->lock_handles[] = $handle;
+                return true;
+            }
+            @fclose($handle);
+        }
+        return false;
+    }
+
+    public function release_slots(): void {
+        foreach ($this->lock_handles as $handle) {
+            if (is_resource($handle)) {
+                @flock($handle, LOCK_UN);
+                @fclose($handle);
+            }
+        }
+        $this->lock_handles = [];
+    }
+
+    private function get_lock_dir(): string {
+        $setup = $this->context->get_setup();
+        if ($setup->get('HAS_WRITABLE_CACHE_PRV')) {
+            return $setup->get('CACHE_PRV_PATH');
+        }
+        return rtrim(sys_get_temp_dir(), '/\\');
+    }
+
+    private function get_root_id(): string {
         $configured_root = $this->context->get_setup()->get('ROOT_PATH');
-        $root = realpath($configured_root) ?: $configured_root;
-        $lock_path = sys_get_temp_dir() . '/h5fs-archive-' . sha1($root) . '.lock';
-        $this->lock_handle = @fopen($lock_path, 'c');
-        return $this->lock_handle !== false
-            && @flock($this->lock_handle, LOCK_EX | LOCK_NB);
+        return realpath($configured_root) ?: $configured_root;
     }
 
-    private function release_lock(): void {
-        if (is_resource($this->lock_handle)) {
-            @flock($this->lock_handle, LOCK_UN);
-            @fclose($this->lock_handle);
+    /**
+     * Maps the client address to one of a fixed number of buckets, so the
+     * number of lock files stays bounded. IPv6 clients are grouped by /64,
+     * since a single client usually controls a whole /64.
+     */
+    private function get_client_bucket(): int {
+        $addr = (string)$this->context->get_setup()->get('REMOTE_ADDR');
+        $packed = @inet_pton($addr);
+        if ($packed !== false && strlen($packed) === 16) {
+            $addr = substr($packed, 0, 8);
         }
-        $this->lock_handle = null;
+        return crc32($addr) % self::CLIENT_BUCKETS;
+    }
+
+    private function int_option(string $keypath, int $default, int $min): int {
+        $value = $this->context->query_option($keypath, $default);
+        if (!is_int($value) && !(is_string($value) && ctype_digit($value))) {
+            return $default;
+        }
+        return max($min, (int)$value);
+    }
+
+    private function begin_stream(): void {
+        // Handle client disconnects ourselves (see send_chunk()), so locks are
+        // released and spawned archive processes are terminated reliably.
+        ignore_user_abort(true);
+        $this->output_started = false;
+        $this->stream_aborted = false;
+        $this->stream_bytes = 0;
+        $this->stream_started_ns = hrtime(true);
+    }
+
+    /**
+     * Sends a chunk to the client and aborts the download if it exceeds the
+     * maximum duration or if the client consumes it too slowly. Output calls
+     * block while the client does not read, so the elapsed wall clock time
+     * reflects the client's reading speed.
+     */
+    private function send_chunk(string $data): bool {
+        if ($this->stream_aborted) {
+            return false;
+        }
+        if ($data === '') {
+            return true;
+        }
+
+        $this->output_started = true;
+        echo $data;
+        @ob_flush();
+        @flush();
+        $this->stream_bytes += strlen($data);
+
+        if (connection_aborted()) {
+            $this->stream_aborted = true;
+            return false;
+        }
+
+        $elapsed = (hrtime(true) - $this->stream_started_ns) / 1e9;
+        $max_duration = $this->int_option('download.maxDuration', self::DEFAULT_MAX_DURATION, 1);
+        $min_rate = $this->int_option('download.minRate', self::DEFAULT_MIN_RATE, 0);
+        $grace = $this->int_option('download.minRateGrace', self::DEFAULT_MIN_RATE_GRACE, 0);
+
+        if (
+            $elapsed > $max_duration
+            || ($min_rate > 0 && $elapsed > $grace && $this->stream_bytes / $elapsed < $min_rate)
+        ) {
+            $this->stream_aborted = true;
+            return false;
+        }
+
+        return true;
     }
 
     private function quota_exceeded(): bool {
@@ -88,12 +227,43 @@ class Archive {
         $cmd = str_replace('[ROOTDIR]', escapeshellarg($this->base_path), $cmd);
         $cmd = str_replace('[DIRS]', count($this->dirs) ? implode(' ', array_map('escapeshellarg', $this->dirs)) : '', $cmd);
         $cmd = str_replace('[FILES]', count($this->files) ? implode(' ', array_map('escapeshellarg', $this->files)) : '', $cmd);
+
+        $null_device = PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null';
+        $pipes = [];
         try {
-            Util::passthru_cmd($cmd);
+            $process = @proc_open($cmd, [
+                0 => ['file', $null_device, 'r'],
+                1 => ['pipe', 'w'],
+                2 => ['file', $null_device, 'w']
+            ], $pipes);
         } catch (\Throwable $err) {
             return false;
         }
-        return true;
+        if (!is_resource($process)) {
+            return false;
+        }
+
+        $this->begin_stream();
+        $ok = true;
+        while (!feof($pipes[1])) {
+            $chunk = fread($pipes[1], self::STREAM_CHUNK_SIZE);
+            if ($chunk === false) {
+                $ok = false;
+                break;
+            }
+            if (!$this->send_chunk($chunk)) {
+                $ok = false;
+                break;
+            }
+        }
+        fclose($pipes[1]);
+
+        if (!$ok) {
+            @proc_terminate($process, 9);
+        }
+        $rc = proc_close($process);
+
+        return $ok && ($rc === 0 || $this->output_started);
     }
 
     private function php_tar(array $dirs, array $files): bool {
@@ -111,18 +281,26 @@ class Archive {
 
         header('Content-Length: ' . $total_size);
 
+        $this->begin_stream();
+
         foreach ($dirs as $real_dir => $archived_dir) {
-            echo $this->php_tar_header($archived_dir, 0, @filemtime($real_dir . DIRECTORY_SEPARATOR . '.'), 5);
+            if (!$this->send_chunk($this->php_tar_header($archived_dir, 0, @filemtime($real_dir . DIRECTORY_SEPARATOR . '.'), 5))) {
+                return false;
+            }
         }
 
         foreach ($files as $real_file => $archived_file) {
             $size = $filesizes[$real_file];
 
-            echo $this->php_tar_header($archived_file, $size, @filemtime($real_file), 0);
-            $this->print_file($real_file);
+            if (
+                !$this->send_chunk($this->php_tar_header($archived_file, $size, @filemtime($real_file), 0))
+                || !$this->print_file($real_file)
+            ) {
+                return false;
+            }
 
-            if ($size % 512 != 0) {
-                echo str_repeat(self::NULL_BYTE, 512 - ($size % 512));
+            if ($size % 512 != 0 && !$this->send_chunk(str_repeat(self::NULL_BYTE, 512 - ($size % 512)))) {
+                return false;
             }
         }
 
@@ -161,16 +339,23 @@ class Archive {
         return $header;
     }
 
-    private function print_file(string $file): void {
-        // Send file content in segments to not hit PHP's memory limit (default: 128M)
-        if ($fd = fopen($file, 'rb')) {
-            while (!feof($fd)) {
-                print fread($fd, self::SEGMENT_SIZE);
-                @ob_flush();
-                @flush();
-            }
-            fclose($fd);
+    private function print_file(string $file): bool {
+        // Send file content in small segments to not hit PHP's memory limit and
+        // to check the client's reading speed regularly
+        $fd = @fopen($file, 'rb');
+        if ($fd === false) {
+            return false;
         }
+        $ok = true;
+        while (!feof($fd)) {
+            $chunk = fread($fd, self::STREAM_CHUNK_SIZE);
+            if ($chunk === false || !$this->send_chunk($chunk)) {
+                $ok = false;
+                break;
+            }
+        }
+        fclose($fd);
+        return $ok;
     }
 
     private function add_hrefs($hrefs): void {
