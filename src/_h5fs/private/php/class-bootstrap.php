@@ -16,6 +16,7 @@ class Bootstrap {
         $context = new Context($session, $request, $setup);
 
         if ($context->is_api_request()) {
+            self::handle_api_errors();
             (new Api($context))->apply();
         } elseif ($context->is_info_request()) {
             $public_href = $setup->get('PUBLIC_HREF');
@@ -29,6 +30,25 @@ class Bootstrap {
             $fallback_html = (new Fallback($context))->get_html();
             require __DIR__ . '/pages/index.php';
         }
+    }
+
+    /**
+     * API responses are JSON: never mix PHP error output into them and turn
+     * any uncaught error into a generic JSON error, the details only go to
+     * the server's error log.
+     */
+    private static function handle_api_errors(): void {
+        ini_set('display_errors', '0');
+        set_exception_handler(static function (\Throwable $err): void {
+            error_log('h5fs: uncaught ' . get_class($err) . ': ' . $err->getMessage()
+                . ' in ' . $err->getFile() . ':' . $err->getLine());
+            // if output was already sent (e.g. a download), just stop
+            if (!headers_sent()) {
+                http_response_code(500);
+                header('Content-type: application/json;charset=utf-8');
+                echo json_encode(['err' => Util::ERR_FAILED, 'msg' => 'internal error']);
+            }
+        });
     }
 
     public static function autoload(string $class_name): void {

@@ -11,7 +11,7 @@ class Api {
     }
 
     public function apply(): void {
-        $action = $this->request->query('action');
+        $action = $this->request->query_string('action');
 
         match ($action) {
             'download' => $this->on_download(),
@@ -25,9 +25,9 @@ class Api {
     private function on_download(): void {
         Util::json_fail(Util::ERR_DISABLED, 'download disabled', !$this->context->query_option('download.enabled', false));
 
-        $as = $this->request->query('as');
-        $type = $this->request->query('type');
-        $base_href = $this->request->query('baseHref');
+        $as = $this->request->query_string('as');
+        $type = $this->request->query_string('type');
+        $base_href = $this->request->query_string('baseHref');
         $hrefs = $this->request->query('hrefs', '');
 
         $archive = new Archive($this->context);
@@ -68,14 +68,14 @@ class Api {
         }
 
         if ($this->request->query('items', false)) {
-            $href = $this->request->query('items.href');
+            $href = $this->request->query_string('items.href');
             $what = $this->request->query_numeric('items.what');
             $response['items'] = $this->context->get_items($href, $what);
         }
 
         if ($this->request->query('custom', false)) {
             Util::json_fail(Util::ERR_DISABLED, 'custom disabled', !$this->context->query_option('custom.enabled', false));
-            $href = $this->request->query('custom');
+            $href = $this->request->query_string('custom');
             $custom = new Custom($this->context);
             $response['custom'] = $custom->get_customizations($href);
         }
@@ -89,8 +89,8 @@ class Api {
 
         if ($this->request->query('search', false)) {
             Util::json_fail(Util::ERR_DISABLED, 'search disabled', !$this->context->query_option('search.enabled', false));
-            $href = $this->request->query('search.href');
-            $pattern = $this->request->query('search.pattern');
+            $href = $this->request->query_string('search.href');
+            $pattern = $this->request->query_string('search.pattern');
             $ignorecase = $this->request->query_boolean('search.ignorecase', false);
             $search = new Search($this->context);
             $response['search'] = $search->get_items($href, $pattern, $ignorecase);
@@ -107,7 +107,7 @@ class Api {
     }
 
     private function on_login(): void {
-        $pass = $this->request->query('pass');
+        $pass = $this->request->query_string('pass');
         Util::json_exit(['asAdmin' => $this->context->login_admin($pass)]);
     }
 

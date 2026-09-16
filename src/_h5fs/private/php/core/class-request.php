@@ -30,6 +30,23 @@ readonly class Request {
         return (int)$value;
     }
 
+    /**
+     * Returns the parameter as string. Numbers are accepted and converted,
+     * any other type (arrays, objects, booleans, null) is rejected with a
+     * JSON error instead of causing a TypeError further down.
+     */
+    public function query_string(string $keypath = '', ?string $default = Util::NO_DEFAULT): ?string {
+        $value = $this->query($keypath, $default);
+        if ($value === null && $default === null) {
+            return null;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (string)$value;
+        }
+        Util::json_fail(Util::ERR_ILLIGAL_PARAM, 'parameter \'' . $keypath . '\' is no string', !is_string($value));
+        return $value;
+    }
+
     public function query_array(string $keypath = '', mixed $default = Util::NO_DEFAULT): array {
         $value = $this->query($keypath, $default);
         Util::json_fail(Util::ERR_ILLIGAL_PARAM, 'parameter \'' . $keypath . '\' is no array', !is_array($value));
