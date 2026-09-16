@@ -144,13 +144,60 @@ class Context {
         if (
             $path === false
             || !is_file($path)
-            || $this->is_hidden(basename($path))
-            || !$this->is_managed_path(dirname($path))
         ) {
             return null;
         }
 
-        return Util::normalize_path($path);
+        $path = Util::normalize_path($path);
+        $parent_path = $this->resolve_managed_path(dirname($path));
+        if (
+            $parent_path === null
+            || $this->is_hidden_entry($parent_path, basename($path))
+        ) {
+            return null;
+        }
+
+        return $path;
+    }
+
+    /**
+     * Applies the same `view.hidden` rules as `read_dir()` to a single entry:
+     * the plain name and the href of the entry are both matched.
+     */
+    private function is_hidden_entry(string $resolved_parent, string $name, ?string $root_path = null): bool {
+        if ($this->is_hidden($name)) {
+            return true;
+        }
+
+        $parent_href = $this->resolved_path_to_href($resolved_parent, $root_path);
+        return $parent_href !== null && $this->is_hidden($parent_href . $name);
+    }
+
+    /**
+     * Like `to_href()`, but for a canonical path produced by `realpath()`,
+     * which may not share a textual prefix with the configured ROOT_PATH.
+     */
+    private function resolved_path_to_href(string $resolved_path, ?string $root_path = null): ?string {
+        if ($root_path === null) {
+            $root_path = realpath($this->setup->get('ROOT_PATH'));
+            if ($root_path === false) {
+                return null;
+            }
+            $root_path = Util::normalize_path($root_path);
+        }
+        if (!$this->is_path_within($resolved_path, $root_path)) {
+            return null;
+        }
+
+        $rel_path = substr($resolved_path, strlen(rtrim($root_path, '/')));
+        $encoded_parts = [];
+        foreach (explode('/', $rel_path) as $part) {
+            if ($part !== '') {
+                $encoded_parts[] = rawurlencode($part);
+            }
+        }
+
+        return Util::normalize_path($this->setup->get('ROOT_HREF') . implode('/', $encoded_parts), true);
     }
 
     private function is_path_within(string $path, string $parent): bool {
@@ -206,6 +253,12 @@ class Context {
             }
             $parent_path = Util::normalize_path(dirname($path));
             if ($parent_path === $path) {
+                return null;
+            }
+            // A folder is only managed if none of its ancestors (below the
+            // root) is hidden, otherwise hidden folders could still be read
+            // by requesting a path inside of them directly.
+            if ($this->is_hidden_entry($parent_path, basename($path), $root_path)) {
                 return null;
             }
             $path = $parent_path;
