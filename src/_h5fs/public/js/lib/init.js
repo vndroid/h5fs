@@ -1,6 +1,11 @@
 const {dom, awaitReady} = require('./util');
 const config = require('./config');
 
+// static requires, so bundlers include the main modules
+const mains = {
+    index: () => require('./main/index'),
+    info: () => require('./main/info')
+};
 const name = dom('script[data-module]').attr('data-module');
 const query = {
     action: 'get',
@@ -20,4 +25,4 @@ if (name === 'index') {
 
 config._update(query)
     .then(() => awaitReady())
-    .then(() => require(`./main/${name}`));
+    .then(() => mains[name]());

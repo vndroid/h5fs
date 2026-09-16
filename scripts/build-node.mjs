@@ -42,7 +42,7 @@ async function write(dest, content) {
 }
 async function bundle(source, minify = false) {
     const result = await esbuild.build({stdin: {contents: await fs.readFile(source, 'utf8'), resolveDir: path.dirname(source), sourcefile: source},
-        bundle: true, format: 'iife', platform: 'browser', target: 'es2017', minify, sourcemap: false,
+        bundle: true, format: 'iife', platform: 'browser', target: 'es2017', minify, sourcemap: false, define: {global: 'globalThis'},
         legalComments: 'none', plugins: [emptyJsdom], write: false});
     return result.outputFiles[0].text;
 }

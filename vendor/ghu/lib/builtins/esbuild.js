@@ -17,7 +17,9 @@ module.exports = options => each(obj => {
         target: 'es2017',
         minify: false,
         sourcemap: false,
-        legalComments: 'none'
+        legalComments: 'none',
+        // the sources use node's `global`, map it to the browser global object
+        define: {global: 'globalThis'}
     }, options, {
         stdin: {
             contents: obj.content,
