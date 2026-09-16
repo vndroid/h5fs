@@ -44,6 +44,18 @@ class Util {
         return 'attachment; filename="' . $ascii . '"; filename*=UTF-8\'\'' . rawurlencode($name);
     }
 
+    /**
+     * Identifies a client by its address; IPv6 clients are grouped by /64,
+     * since a single client usually controls a whole /64.
+     */
+    public static function client_id(string $addr): string {
+        $packed = @inet_pton($addr);
+        if ($packed !== false && strlen($packed) === 16) {
+            return inet_ntop(substr($packed, 0, 8) . str_repeat("\0", 8)) . '/64';
+        }
+        return $addr;
+    }
+
     public static function json_exit(array $obj = []): void {
         header('Content-type: application/json;charset=utf-8');
         echo json_encode($obj);

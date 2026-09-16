@@ -152,12 +152,8 @@ class Archive {
      * since a single client usually controls a whole /64.
      */
     private function get_client_bucket(): int {
-        $addr = (string)$this->context->get_setup()->get('REMOTE_ADDR');
-        $packed = @inet_pton($addr);
-        if ($packed !== false && strlen($packed) === 16) {
-            $addr = substr($packed, 0, 8);
-        }
-        return crc32($addr) % self::CLIENT_BUCKETS;
+        $client = Util::client_id((string)$this->context->get_setup()->get('REMOTE_ADDR'));
+        return crc32($client) % self::CLIENT_BUCKETS;
     }
 
     private function int_option(string $keypath, int $default, int $min): int {

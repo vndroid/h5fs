@@ -124,12 +124,29 @@ class Api {
         Util::json_exit($response);
     }
 
+    /**
+     * Login and logout change the session state, so they only accept JSON
+     * requests: browsers can't send those cross-site without a CORS
+     * preflight, which protects against CSRF.
+     */
+    private function require_json_request(): void {
+        $content_type = strtolower(trim(explode(';', $this->setup->get('CONTENT_TYPE'))[0]));
+        Util::json_fail(Util::ERR_UNSUPPORTED, 'JSON request required', $content_type !== 'application/json');
+    }
+
     private function on_login(): void {
+        $this->require_json_request();
         $pass = $this->request->query_string('pass');
-        Util::json_exit(['asAdmin' => $this->context->login_admin($pass)]);
+        $result = $this->context->login_admin($pass);
+        if ($result === null) {
+            http_response_code(429);
+            Util::json_exit(['asAdmin' => false, 'err' => 'ERR_LOCKED', 'msg' => 'too many failed logins, try again later']);
+        }
+        Util::json_exit(['asAdmin' => $result]);
     }
 
     private function on_logout(): void {
+        $this->require_json_request();
         Util::json_exit(['asAdmin' => $this->context->logout_admin()]);
     }
 }

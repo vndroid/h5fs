@@ -8,7 +8,13 @@ class Bootstrap {
         putenv('LANG=en_US.UTF-8');
         setlocale(LC_CTYPE, 'en_US.UTF-8');
         date_default_timezone_set(date_default_timezone_get());
-        session_start();
+        session_start([
+            'cookie_httponly' => true,
+            'cookie_samesite' => 'Lax',
+            'cookie_secure' => self::is_https(),
+            'use_strict_mode' => true,
+            'use_only_cookies' => true
+        ]);
 
         $session = new Session($_SESSION);
         $request = new Request($_REQUEST, file_get_contents('php://input'));
@@ -49,6 +55,12 @@ class Bootstrap {
                 echo json_encode(['err' => Util::ERR_FAILED, 'msg' => 'internal error']);
             }
         });
+    }
+
+    private static function is_https(): bool {
+        $https = $_SERVER['HTTPS'] ?? '';
+        return ($https !== '' && strtolower((string)$https) !== 'off')
+            || (string)($_SERVER['SERVER_PORT'] ?? '') === '443';
     }
 
     public static function autoload(string $class_name): void {

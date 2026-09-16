@@ -2,7 +2,9 @@
 
 class Context {
     private const MAX_THUMB_REQUESTS = 40;
+    // SHA512 of the empty string, the former preset
     private const DEFAULT_PASSHASH = 'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e';
+    private const MAX_PASS_LENGTH = 1024;
     private const AS_ADMIN_SESSION_KEY = 'AS_ADMIN';
     private const L10N_ISO_CODES = [
         'af', 'bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'he',
@@ -22,8 +24,10 @@ class Context {
     ) {
         $this->options = Json::load($this->setup->get('CONF_PATH') . '/options.json');
 
-        $this->passhash = $this->query_option('passhash', '');
-        $this->options['hasCustomPasshash'] = strcasecmp($this->passhash, self::DEFAULT_PASSHASH) !== 0;
+        $passhash = $this->query_option('passhash', '');
+        $this->passhash = is_string($passhash) ? trim($passhash) : '';
+        // name kept for compatibility: true if the admin login is enabled
+        $this->options['hasCustomPasshash'] = $this->is_login_enabled();
         unset($this->options['passhash']);
     }
 
@@ -84,14 +88,63 @@ class Context {
         return $result;
     }
 
-    public function login_admin(#[\SensitiveParameter] string $pass): bool {
-        $this->session->set(self::AS_ADMIN_SESSION_KEY, strcasecmp(hash('sha512', $pass), $this->passhash) === 0);
-        return $this->session->get(self::AS_ADMIN_SESSION_KEY);
+    /**
+     * The login is only enabled with a configured password: either a
+     * `password_hash()` hash (recommended) or a legacy SHA512 hex digest.
+     * The former preset (SHA512 of the empty string) disables the login.
+     */
+    public function is_login_enabled(): bool {
+        if ($this->passhash === '' || hash_equals(self::DEFAULT_PASSHASH, strtolower($this->passhash))) {
+            return false;
+        }
+        return $this->is_password_hash($this->passhash)
+            || preg_match('/^[0-9a-f]{128}$/i', $this->passhash) === 1;
+    }
+
+    private function is_password_hash(string $hash): bool {
+        return str_starts_with($hash, '$') && password_get_info($hash)['algo'] !== null;
+    }
+
+    private function verify_password(#[\SensitiveParameter] string $pass): bool {
+        if ($this->is_password_hash($this->passhash)) {
+            return password_verify($pass, $this->passhash);
+        }
+        return hash_equals(strtolower($this->passhash), hash('sha512', $pass));
+    }
+
+    /**
+     * Returns true on success, false on a wrong password (or disabled login)
+     * and null if the client is currently locked out after failed attempts.
+     */
+    public function login_admin(#[\SensitiveParameter] string $pass): ?bool {
+        $this->session->set(self::AS_ADMIN_SESSION_KEY, false);
+
+        if (!$this->is_login_enabled() || strlen($pass) > self::MAX_PASS_LENGTH) {
+            return false;
+        }
+
+        $throttle = new LoginThrottle($this->setup);
+        $retry_after = $throttle->retry_after();
+        if ($retry_after === null || $retry_after > 0) {
+            return null;
+        }
+
+        if (!$this->verify_password($pass)) {
+            $throttle->record_failure();
+            return false;
+        }
+
+        $throttle->reset();
+        // new session id on privilege change (session fixation)
+        $this->session->regenerate();
+        $this->session->set(self::AS_ADMIN_SESSION_KEY, true);
+        return true;
     }
 
     public function logout_admin(): bool {
         $this->session->set(self::AS_ADMIN_SESSION_KEY, false);
-        return $this->session->get(self::AS_ADMIN_SESSION_KEY);
+        $this->session->regenerate();
+        return false;
     }
 
     public function is_admin(): bool {

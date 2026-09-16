@@ -17,8 +17,10 @@ const loginTpl =
             <span id="login">login</span>
             <span id="logout">logout</span>
             <div id="hint">
-                The preset password is the empty string, just click login.
-                Change it in '_h5fs/private/conf/options.json'.
+                The login is disabled until a password is set:
+                put a hash generated with
+                <code>php -r 'echo password_hash("your-password", PASSWORD_DEFAULT);'</code>
+                into "passhash" in '_h5fs/private/conf/options.json'.
             </div>
         </div>`;
 const setup = config.setup;
@@ -147,6 +149,15 @@ const onKeydown = ev => {
 const addLogin = () => {
     dom(loginTpl).appTo('#content');
 
+    if (!setup.AS_ADMIN && !config.options.hasCustomPasshash) {
+        dom('#pass').rm();
+        dom('#login').rm();
+        dom('#logout').rm();
+        return;
+    }
+
+    dom('#hint').rm();
+
     if (setup.AS_ADMIN) {
         dom('#pass').rm();
         dom('#login').rm();
@@ -155,9 +166,6 @@ const addLogin = () => {
         dom('#pass').on('keydown', onKeydown)[0].focus();
         dom('#login').on('click', onLogin);
         dom('#logout').rm();
-    }
-    if (config.options.hasCustomPasshash) {
-        dom('#hint').rm();
     }
 };
 
