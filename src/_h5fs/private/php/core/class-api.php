@@ -35,7 +35,8 @@ class Api {
         set_time_limit(self::DOWNLOAD_TIMEOUT_SECONDS);
         session_write_close();
         header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="' . $as . '"');
+        header('X-Content-Type-Options: nosniff');
+        header('Content-Disposition: ' . Util::content_disposition_attachment($this->get_package_name($as, $type)));
         header('Connection: close');
         $ok = $archive->output($type, $base_href, $hrefs);
 
@@ -43,6 +44,23 @@ class Api {
         // anymore, the client just receives a truncated download.
         Util::json_fail(Util::ERR_FAILED, 'packaging failed', !$ok && !$archive->has_started_output());
         exit;
+    }
+
+    /**
+     * Cleaned package name that always has the extension matching the
+     * archive type.
+     */
+    private function get_package_name(string $as, string $type): string {
+        $extension = match ($type) {
+            'shell-zip' => '.zip',
+            'php-tar', 'shell-tar' => '.tar',
+            default => ''
+        };
+        $as = Util::sanitize_filename($as, 'package');
+        if ($extension !== '' && strcasecmp(substr($as, -strlen($extension)), $extension) !== 0) {
+            $as .= $extension;
+        }
+        return $as;
     }
 
     private function on_get(): void {

@@ -14,6 +14,36 @@ class Util {
         return preg_match('#^(\w:)?/$#', $path) ? $path : (rtrim($path, '/') . ($trailing_slash ? '/' : ''));
     }
 
+    /**
+     * Cleans an untrusted file name: invalid UTF-8, control and format
+     * characters (e.g. RTL overrides) are removed, path separators replaced,
+     * leading/trailing dots and spaces trimmed and the length is limited.
+     */
+    public static function sanitize_filename(string $name, string $fallback = 'download'): string {
+        if (preg_match('//u', $name) !== 1) {
+            $name = function_exists('mb_scrub') ? mb_scrub($name, 'UTF-8') : preg_replace('/[\x80-\xFF]/', '', $name);
+        }
+        $name = preg_replace('/[\x00-\x1F\x7F]|\p{Cc}|\p{Cf}|\p{Zl}|\p{Zp}/u', '', $name) ?? '';
+        $name = str_replace(['/', '\\'], '_', $name);
+        $name = trim($name, " .\t");
+        if (preg_match('/^.{0,200}/us', $name, $matches) === 1) {
+            $name = $matches[0];
+        }
+        return $name === '' ? $fallback : $name;
+    }
+
+    /**
+     * Builds a safe `Content-Disposition: attachment` header value: a quoted
+     * plain ASCII fallback (no quotes, backslashes, `%` or `;`) plus the
+     * UTF-8 name as RFC 6266/5987 `filename*`.
+     */
+    public static function content_disposition_attachment(string $name): string {
+        $name = Util::sanitize_filename($name);
+        $ascii = preg_replace('/[^\x20-\x7E]|["\\\\%;]/', '_', $name);
+
+        return 'attachment; filename="' . $ascii . '"; filename*=UTF-8\'\'' . rawurlencode($name);
+    }
+
     public static function json_exit(array $obj = []): void {
         header('Content-type: application/json;charset=utf-8');
         echo json_encode($obj);
