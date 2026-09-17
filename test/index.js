@@ -13,6 +13,7 @@ require('./tests/unit/util/naturalCmp');
 require('./tests/unit/util/parsePatten');
 require('./tests/unit/util/sanitizeHtml');
 require('./tests/unit/util/customHtml');
+require('./tests/unit/util/reqlib');
 
 pin_html();
 

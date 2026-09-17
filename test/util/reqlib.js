@@ -6,8 +6,10 @@ const LIB = '../../src/_h5fs/public/js/lib';
 // first line of the message; any other error (e.g. thrown while loading the
 // module, or a missing dependency of it) names something else and is rethrown.
 const isNotFound = (err, file) => {
-    const firstLine = String(err && err.message).split('\n')[0];
-    return firstLine.includes(file) && (err.code === 'MODULE_NOT_FOUND' || (/not found/i).test(firstLine));
+    if (!err || typeof err.message !== 'string') return false;
+    const firstLine = err.message.split('\n')[0];
+    return err.code === 'MODULE_NOT_FOUND' && firstLine === `Cannot find module '${file}'` ||
+        firstLine === `Module not found in bundle: ${file}`;
 };
 
 const reqlib = x => {
@@ -25,3 +27,4 @@ const reqlib = x => {
 };
 
 module.exports = reqlib;
+reqlib.isNotFound = isNotFound;
