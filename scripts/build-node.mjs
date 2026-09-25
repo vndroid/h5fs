@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 import {glob} from 'glob';
 import * as esbuild from 'esbuild';
@@ -11,6 +10,7 @@ import pug from 'pug';
 
 const require = createRequire(import.meta.url);
 const includeit = require('./lib/include.cjs');
+const buildVersion = require('./lib/version.cjs');
 const cssmin = require('cssmin');
 const createArchive = require('./lib/archive.cjs');
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -19,15 +19,7 @@ const TEST = path.join(ROOT, 'test');
 const BUILD = path.resolve(process.env.H5FS_BUILD_DIR || path.join(ROOT, 'build-node'));
 const pkg = JSON.parse(await fs.readFile(path.join(ROOT, 'package.json'), 'utf8'));
 
-function buildVersion() {
-    if (process.env.H5FS_VERSION) return process.env.H5FS_VERSION;
-    try {
-        const hashes = execFileSync('git', ['rev-list', `v${pkg.version}..HEAD`], {cwd: ROOT, encoding: 'utf8'}).trim().split(/\r?\n/).filter(Boolean);
-        return hashes.length ? `${pkg.version}+${String(hashes.length).padStart(3, '0')}~${hashes[0].slice(0, 7)}` : pkg.version;
-    } catch { return pkg.version; }
-}
-
-const version = buildVersion();
+const version = buildVersion(pkg.version, ROOT);
 const comment = `${pkg.name} v${version} - ${pkg.homepage}`;
 const commentJs = `/* ${comment} */\n`;
 const commentHtml = `<!-- ${comment} -->`;

@@ -14,7 +14,7 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "test": "node test",
+    "test": "node test && node --test test/build-version.test.cjs",
     "build": "npm run build:node",
     "build:node": "node scripts/build-node.mjs",
     "build:ghu": "node ghu release",

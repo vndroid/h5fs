@@ -1,7 +1,7 @@
 const {resolve, join} = require('path');
 const {
     ghu, autoprefixer, cssmin, each, esbuild, ife, less, mapfn,
-    pug, read, remove, run, wrap, write
+    pug, read, remove, wrap, write
 } = require('ghu');
 
 const ROOT = resolve(__dirname);
@@ -9,6 +9,7 @@ const SRC = join(ROOT, 'src');
 const TEST = join(ROOT, 'test');
 const BUILD = resolve(process.env.H5FS_BUILD_DIR || join(ROOT, 'build-ghu'));
 const createArchive = require('./scripts/lib/archive.cjs');
+const buildVersion = require('./scripts/lib/version.cjs');
 const expandIncludes = require('./scripts/lib/include.cjs');
 const includeit = () => each(obj => { obj.content = expandIncludes({file: obj.source, content: obj.content}); });
 const mapper = mapfn.p(SRC, BUILD).s('.less', '.css').s('.pug', '');
@@ -17,18 +18,7 @@ const browserEsbuild = {define: {global: 'window'}};
 ghu.defaults('release');
 ghu.before(runtime => {
     runtime.pkg = Object.assign({}, require('./package.json'));
-    const forcedVersion = process.env.H5FS_VERSION;
-    if (forcedVersion) {
-        runtime.pkg.version = forcedVersion;
-    } else {
-        const res = run.sync(`git rev-list v${runtime.pkg.version}..HEAD`, {silent: true});
-        if (res.code === 0) {
-            const hashes = res.stdout.split(/\r?\n/).filter(Boolean);
-            if (hashes.length) {
-                runtime.pkg.version += `+${('000' + hashes.length).slice(-3)}~${hashes[0].slice(0, 7)}`;
-            }
-        }
-    }
+    runtime.pkg.version = buildVersion(runtime.pkg.version, ROOT);
     runtime.comment = `${runtime.pkg.name} v${runtime.pkg.version} - ${runtime.pkg.homepage}`;
     runtime.comment_js = `/* ${runtime.comment} */\n`;
     runtime.comment_html = `<!-- ${runtime.comment} -->`;

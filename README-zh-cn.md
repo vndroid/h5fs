@@ -2,22 +2,28 @@
 
 服务端运行环境需要 PHP 8.2 或更高版本。
 
-## 版本替换
-
-构建出来的版本号自带标识，使用命令进行去除：
-
-```sh
-cd _h5fs
-find . -type f -exec sed -i 's/0.30.0+000~0000000/0.30.0/g' {} \;
-```
-
 ## 打包
 
-使用 Node.js 22.18+ 或 24.11+ 安装依赖并构建：
+使用 Node.js 22.18～22.x 或 24.11+ 安装依赖并构建：
 
 ```sh
 npm ci
 npm run build
 ```
 
-构建完成后，可在 `build` 目录中找到 `h5fs-<version>.zip`。
+构建完成后，可在 `build-node` 目录中找到 `h5fs-<version>.zip`。
+
+如需指定页面和压缩包使用的版本号，在构建命令前设置 `H5FS_VERSION`：
+
+```sh
+H5FS_VERSION=0.30.0 npm run build
+```
+
+`npm run build:node` 和 `npm run build:ghu` 都支持该环境变量。版本号长度为
+1～128 个字符，首字符必须是英文字母或数字，其余字符只能包含英文字母、数字、
+`.`、`_`、`+`、`~` 和 `-`。
+未设置时，完整 Git 仓库若含有对应的 `v<package-version>` 标签，会使用
+`<package-version>+<提交数>~<短哈希>`；恰好位于标签上则仅使用包版本号。
+浅克隆或缺少标签时使用 `<package-version>+git~<12 位哈希>`；不含 Git 元数据的
+源码压缩包使用包版本号。构建过程不会自动拉取标签。需要比较两种构建的结果时，
+依次运行 `npm run build:node`、`npm run build:ghu` 和 `npm run build:compare`。

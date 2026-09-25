@@ -21,13 +21,31 @@ The server runtime requires PHP 8.2 or later.
 There are installation ready packages for the latest [releases][release] and
 [dev builds][develop]. But to build **h5fs** yourself either `git clone` or
 download the repository. From within the root folder run the following
-commands to find a fresh zipball in folder `build` (tested on linux only,
-requires [`Node.js 22.18+ or 24.11+`][node] to be installed).
+commands to find a fresh zipball in folder `build-node` (tested on linux only,
+requires [`Node.js 22.18–22.x or 24.11+`][node] to be installed).
 
 ~~~sh
-> npm install
-> npm run build
+npm ci
+npm run build
 ~~~
+
+Set `H5FS_VERSION` to choose the version embedded in the pages and package
+filename:
+
+~~~sh
+H5FS_VERSION=0.30.0 npm run build
+~~~
+
+The same variable works with `npm run build:node` and `npm run build:ghu`.
+The value must be 1–128 characters long, start with a letter or digit, and
+otherwise contain only letters, digits, `.`, `_`, `+`, `~`, or `-`. If it is
+unset, a full Git checkout with a
+`v<package-version>` tag uses `<package-version>+<commits>~<short-hash>`;
+an exact tagged checkout uses the package version. A shallow checkout or a
+checkout without that tag uses `<package-version>+git~<12-character-hash>`.
+A source archive without Git metadata uses the package version. The build
+never fetches tags. Both build commands use the same version rules; run
+`npm run build:compare` after both builds to compare their output.
 
 
 ## License
