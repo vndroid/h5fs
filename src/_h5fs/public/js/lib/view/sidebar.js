@@ -1,8 +1,10 @@
-const {dom} = require('../util');
-const resource = require('../core/resource');
-const allsettings = require('../core/settings');
-const store = require('../core/store');
-const base = require('./base');
+import util from '../util/index.js';
+import resource from '../core/resource.js';
+import allsettings from '../core/settings.js';
+import store from '../core/store.js';
+import base from './base.js';
+const {dom} = util;
+
 
 
 const settings = Object.assign({
@@ -51,4 +53,4 @@ const init = () => {
     };
 };
 
-module.exports = init();
+export default init();

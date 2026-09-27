@@ -1,4 +1,6 @@
-const {isStr, isFn, dom} = require('../util');
+import util from '../util/index.js';
+const {isStr, isFn, dom} = util;
+
 
 const subscriptions = {};
 
@@ -22,7 +24,7 @@ const pub = (topic, ...args) => {
 
 dom(global.window).on('resize', () => pub('resize'));
 
-module.exports = {
+export default {
     sub,
     pub
 };

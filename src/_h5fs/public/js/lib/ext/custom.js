@@ -1,7 +1,9 @@
-const {each, dom, renderCustomHtml} = require('../util');
-const server = require('../server');
-const event = require('../core/event');
-const allsettings = require('../core/settings');
+import util from '../util/index.js';
+import server from '../server.js';
+import event from '../core/event.js';
+import allsettings from '../core/settings.js';
+const {each, dom, renderCustomHtml} = util;
+
 
 
 const settings = Object.assign({

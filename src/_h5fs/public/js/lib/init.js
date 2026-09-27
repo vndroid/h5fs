@@ -1,10 +1,11 @@
-const {dom, awaitReady} = require('./util');
-const config = require('./config');
+import util from './util/index.js';
+import config from './config.js';
 
-// static requires, so bundlers include the main modules
+const {dom, awaitReady} = util;
+
 const mains = {
-    index: () => require('./main/index'),
-    info: () => require('./main/info')
+    index: () => import('./main/index.js'),
+    info: () => import('./main/info.js')
 };
 const name = dom('script[data-module]').attr('data-module');
 const query = {

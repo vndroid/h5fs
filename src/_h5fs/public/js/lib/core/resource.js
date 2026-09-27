@@ -1,6 +1,8 @@
-const {includes} = require('../util');
-const config = require('../config');
-const settings = require('./settings');
+import util from '../util/index.js';
+import config from '../config.js';
+import settings from './settings.js';
+const {includes} = util;
+
 
 const imagesHref = settings.publicHref + 'images/';
 const uiHref = imagesHref + 'ui/';
@@ -31,7 +33,7 @@ const icon = id => {
 };
 
 
-module.exports = {
+export default {
     image,
     icon
 };

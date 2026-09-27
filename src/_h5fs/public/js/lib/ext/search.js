@@ -1,11 +1,13 @@
-const {map, debounce, parsePattern, dom} = require('../util');
-const server = require('../server');
-const event = require('../core/event');
-const location = require('../core/location');
-const resource = require('../core/resource');
-const allsettings = require('../core/settings');
-const Item = require('../model/item');
-const view = require('../view/view');
+import util from '../util/index.js';
+import server from '../server.js';
+import event from '../core/event.js';
+import location from '../core/location.js';
+import resource from '../core/resource.js';
+import allsettings from '../core/settings.js';
+import Item from '../model/item.js';
+import view from '../view/view.js';
+const {map, debounce, parsePattern, dom} = util;
+
 
 
 const settings = Object.assign({

@@ -1,11 +1,13 @@
-const {each, map, includes, intersection, dom} = require('../util');
-const event = require('../core/event');
-const format = require('../core/format');
-const location = require('../core/location');
-const resource = require('../core/resource');
-const store = require('../core/store');
-const allsettings = require('../core/settings');
-const base = require('./base');
+import util from '../util/index.js';
+import event from '../core/event.js';
+import format from '../core/format.js';
+import location from '../core/location.js';
+import resource from '../core/resource.js';
+import store from '../core/store.js';
+import allsettings from '../core/settings.js';
+import base from './base.js';
+const {each, map, includes, intersection, dom} = util;
+
 
 const modes = ['details', 'grid', 'icons'];
 const sizes = [20, 40, 60, 80, 100, 150, 200, 250, 300, 350, 400];
@@ -275,7 +277,7 @@ const init = () => {
 
 init();
 
-module.exports = {
+export default {
     $el: $view,
     setItems,
     changeItems,

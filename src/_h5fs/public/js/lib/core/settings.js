@@ -1,6 +1,7 @@
-const config = require('../config');
+import config from '../config.js';
 
-module.exports = Object.assign({}, config.options, {
+
+export default Object.assign({}, config.options, {
     publicHref: config.setup.PUBLIC_HREF,
     rootHref: config.setup.ROOT_HREF
 });

@@ -14,10 +14,11 @@ module.exports = options => each(obj => {
         bundle: true,
         format: 'iife',
         platform: 'browser',
-        target: 'es2017',
+        target: 'es2020',
         minify: false,
         sourcemap: false,
         legalComments: 'none',
+        logOverride: {'unsupported-regexp': 'error'},
         // the sources use node's `global`, map it to the browser window
         define: {global: 'window'}
     }, options, {

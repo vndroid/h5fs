@@ -1,5 +1,5 @@
-require('./preview');
-require('./preview-aud');
-require('./preview-img');
-require('./preview-txt');
-require('./preview-vid');
+import './preview.js';
+import './preview-aud.js';
+import './preview-img.js';
+import './preview-txt.js';
+import './preview-vid.js';

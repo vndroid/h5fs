@@ -1,23 +1,28 @@
-const {resolve, join} = require('path');
+import {resolve, join} from 'node:path';
+import fs from 'node:fs';
+import {URL} from 'node:url';
+import ghuModule from 'ghu';
+import createArchive from './scripts/lib/archive.js';
+import buildVersion from './scripts/lib/version.js';
+import expandIncludes from './scripts/lib/include.js';
+
 const {
     ghu, autoprefixer, cssmin, each, esbuild, ife, less, mapfn,
     pug, read, remove, wrap, write
-} = require('ghu');
+} = ghuModule;
 
-const ROOT = resolve(__dirname);
+const ROOT = resolve(import.meta.dirname);
 const SRC = join(ROOT, 'src');
 const TEST = join(ROOT, 'test');
 const BUILD = resolve(process.env.H5FS_BUILD_DIR || join(ROOT, 'build-ghu'));
-const createArchive = require('./scripts/lib/archive.cjs');
-const buildVersion = require('./scripts/lib/version.cjs');
-const expandIncludes = require('./scripts/lib/include.cjs');
+const packageInfo = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 const includeit = () => each(obj => { obj.content = expandIncludes({file: obj.source, content: obj.content}); });
 const mapper = mapfn.p(SRC, BUILD).s('.less', '.css').s('.pug', '');
-const browserEsbuild = {define: {global: 'window'}};
+const browserEsbuild = {target: 'es2020', define: {global: 'window'}, logOverride: {'unsupported-regexp': 'error'}};
 
 ghu.defaults('release');
 ghu.before(runtime => {
-    runtime.pkg = Object.assign({}, require('./package.json'));
+    runtime.pkg = Object.assign({}, packageInfo);
     runtime.pkg.version = buildVersion(runtime.pkg.version, ROOT);
     runtime.comment = `${runtime.pkg.name} v${runtime.pkg.version} - ${runtime.pkg.homepage}`;
     runtime.comment_js = `/* ${runtime.comment} */\n`;

@@ -1,6 +1,7 @@
-const {test, assert} = require('scar');
-const reqlib = require('../../../util/reqlib');
-const format = reqlib('core/format');
+import scar from 'scar';
+import format from '../../../../src/_h5fs/public/js/lib/core/format.js';
+
+const {test, assert} = scar;
 
 test('core.format', () => {
     assert.equal(typeof format, 'object');

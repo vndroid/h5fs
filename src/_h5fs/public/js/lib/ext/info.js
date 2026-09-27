@@ -1,10 +1,12 @@
-const kjua = require('kjua');
-const {isNum, dom} = require('../util');
-const event = require('../core/event');
-const format = require('../core/format');
-const resource = require('../core/resource');
-const allsettings = require('../core/settings');
-const store = require('../core/store');
+import kjua from 'kjua';
+import util from '../util/index.js';
+import event from '../core/event.js';
+import format from '../core/format.js';
+import resource from '../core/resource.js';
+import allsettings from '../core/settings.js';
+import store from '../core/store.js';
+const {isNum, dom} = util;
+
 
 
 const settings = Object.assign({

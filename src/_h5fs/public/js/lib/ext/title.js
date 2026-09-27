@@ -1,5 +1,6 @@
-const event = require('../core/event');
-const allsettings = require('../core/settings');
+import event from '../core/event.js';
+import allsettings from '../core/settings.js';
+
 
 const doc = global.window.document;
 const settings = Object.assign({

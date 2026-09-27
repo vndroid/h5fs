@@ -45,7 +45,7 @@ const debounce = (fn, delay) => {
     };
 };
 
-module.exports = {
+export default {
     is,
     isStr,
     isFn,

@@ -22,7 +22,7 @@ const put = (key, value) => {
 const get = key => load()[key];
 
 
-module.exports = {
+export default {
     put,
     get
 };

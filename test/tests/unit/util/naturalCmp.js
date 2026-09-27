@@ -1,6 +1,8 @@
-const {test, assert, insp} = require('scar');
-const reqlib = require('../../../util/reqlib');
-const {naturalCmp} = reqlib('util');
+import scar from 'scar';
+import util from '../../../../src/_h5fs/public/js/lib/util/index.js';
+
+const {test, assert, insp} = scar;
+const {naturalCmp} = util;
 
 test('util.naturalCmp()', () => {
     assert.equal(typeof naturalCmp, 'function', 'is function');

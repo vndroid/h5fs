@@ -1,8 +1,10 @@
-const lolight = require('lolight');
-const {marked} = require('marked');
-const {keys, dom, sanitizeHtml} = require('../../util');
-const allsettings = require('../../core/settings');
-const preview = require('./preview');
+import lolight from 'lolight';
+import {marked} from 'marked';
+import util from '../../util/index.js';
+import allsettings from '../../core/settings.js';
+import preview from './preview.js';
+const {keys, dom, sanitizeHtml} = util;
+
 
 const win = global.window;
 const XHR = win.XMLHttpRequest;

@@ -1,6 +1,8 @@
-const {test, assert} = require('scar');
-const reqlib = require('../../../util/reqlib');
-const {renderCustomHtml} = reqlib('util');
+import scar from 'scar';
+import util from '../../../../src/_h5fs/public/js/lib/util/index.js';
+
+const {test, assert} = scar;
+const {renderCustomHtml} = util;
 
 test('util.renderCustomHtml()', () => {
     const unsafeUrl = ['java', 'script:alert(3)'].join('');

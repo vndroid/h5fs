@@ -1,6 +1,8 @@
-const {dom} = require('../../util');
-const allsettings = require('../../core/settings');
-const preview = require('./preview');
+import util from '../../util/index.js';
+import allsettings from '../../core/settings.js';
+import preview from './preview.js';
+const {dom} = util;
+
 
 const settings = Object.assign({
     enabled: false,

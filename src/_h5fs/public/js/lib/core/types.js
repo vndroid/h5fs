@@ -1,5 +1,7 @@
-const {each, map} = require('../util');
-const config = require('../config');
+import util from '../util/index.js';
+import config from '../config.js';
+const {each, map} = util;
+
 
 const reEndsWithSlash = /\/$/;
 const regexps = {};
@@ -38,6 +40,6 @@ const getType = sequence => {
 
 parse(Object.assign({}, config.types));
 
-module.exports = {
+export default {
     getType
 };

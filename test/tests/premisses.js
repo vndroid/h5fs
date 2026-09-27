@@ -1,4 +1,6 @@
-const {test, assert} = require('scar');
+import scar from 'scar';
+
+const {test, assert} = scar;
 
 test('window is global object', () => {
     assert.ok(global.window);

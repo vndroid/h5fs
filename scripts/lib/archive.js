@@ -1,9 +1,9 @@
-const fs = require('fs/promises');
-const path = require('path');
-const {glob} = require('glob');
-const JSZip = require('jszip');
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {glob} from 'glob';
+import JSZip from 'jszip';
 
-module.exports = async (buildDir, target) => {
+export default async (buildDir, target) => {
     const files = (await glob('_h5fs/**', {cwd: buildDir, absolute: true, dot: true, nodir: true})).sort();
     const zip = new JSZip();
     for (const source of files) {

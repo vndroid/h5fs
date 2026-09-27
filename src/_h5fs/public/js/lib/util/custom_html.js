@@ -1,11 +1,13 @@
-const {marked} = require('marked');
-const {sanitizeHtml} = require('./sanitize_html');
+import {marked} from 'marked';
+import sanitizer from './sanitize_html.js';
+const {sanitizeHtml} = sanitizer;
+
 
 const render_custom_html = (content, type) => {
     const html = type === 'md' ? marked(content) : content;
     return sanitizeHtml(html);
 };
 
-module.exports = {
+export default {
     renderCustomHtml: render_custom_html
 };

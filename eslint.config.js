@@ -1,19 +1,39 @@
-module.exports = [
+import esx from 'eslint-plugin-es-x';
+
+// Browser bundles target ES2020 (see scripts/build-node.mjs). esbuild lowers
+// newer syntax but does not polyfill APIs, so src/ may use ES2021-2024 syntax
+// while built-ins added after ES2020 (up to esnext) are rejected here.
+const esbuildLoweredSyntax = [
+    'no-arbitrary-module-namespace-names',
+    'no-class-instance-fields',
+    'no-class-private-fields',
+    'no-class-private-methods',
+    'no-class-static-block',
+    'no-class-static-fields',
+    'no-hashbang',
+    'no-logical-assignment-operators',
+    'no-numeric-separators',
+    'no-private-in'
+];
+const esxApiRules = Object.assign({},
+    ...['es2021', 'es2022', 'es2023', 'es2024', 'es2025', 'es2026', 'esnext']
+        .map(version => esx.configs[`flat/no-new-in-${version}`].rules),
+    ...esbuildLoweredSyntax.map(rule => ({[`es-x/${rule}`]: 0}))
+);
+
+export default [
     {
         ignores: ['build/**', 'build-ghu/**', 'build-node/**', 'node_modules/**', 'vendor/**']
     },
     {
         files: ['**/*.js'],
         languageOptions: {
-            ecmaVersion: 2020,
-            sourceType: 'commonjs',
+            ecmaVersion: 2024,
+            sourceType: 'module',
             globals: {
-                __dirname: 'readonly',
                 clearTimeout: 'readonly',
                 console: 'readonly',
                 global: 'readonly',
-                module: 'readonly',
-                require: 'readonly',
                 setTimeout: 'readonly'
             }
         },
@@ -203,9 +223,41 @@ module.exports = [
     },
     {
         files: ['src/**/*.js'],
+        languageOptions: {
+            ecmaVersion: 2024,
+            sourceType: 'module'
+        },
+        plugins: {
+            'es-x': esx
+        },
+        settings: {
+            // instance methods are only flagged when the receiver type can be
+            // inferred; aggressive mode misreads lo/dom helpers (map, find, ...)
+            'es-x': {aggressive: false}
+        },
         rules: {
+            ...esxApiRules,
             'no-console': 1,
+            'no-unused-vars': [1, {vars: 'all', args: 'after-used'}],
             'prefer-reflect': 0
+        }
+    },
+    {
+        files: ['src/_h5fs/public/js/pre.js'],
+        languageOptions: {
+            sourceType: 'script'
+        }
+    },
+    {
+        files: ['scripts/lib/version.js'],
+        languageOptions: {
+            globals: {
+                process: 'readonly'
+            }
+        },
+        rules: {
+            'no-process-env': 0,
+            complexity: [1, 15]
         }
     }
 ];

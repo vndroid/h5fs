@@ -1,5 +1,7 @@
-const {dom} = require('../util');
-const base = require('./base');
+import util from '../util/index.js';
+import base from './base.js';
+const {dom} = util;
+
 
 const init = () => {
     const $el = dom('<div id="notification"></div>').hide().appTo(base.$root);
@@ -17,4 +19,4 @@ const init = () => {
     };
 };
 
-module.exports = init();
+export default init();

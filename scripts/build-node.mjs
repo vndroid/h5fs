@@ -1,18 +1,16 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {createRequire} from 'node:module';
 import {glob} from 'glob';
 import * as esbuild from 'esbuild';
 import less from 'less';
 import postcss from 'postcss';
 import autoprefixer from 'autoprefixer';
 import pug from 'pug';
+import includeit from './lib/include.js';
+import buildVersion from './lib/version.js';
+import createArchive from './lib/archive.js';
 
-const require = createRequire(import.meta.url);
-const includeit = require('./lib/include.cjs');
-const buildVersion = require('./lib/version.cjs');
-const cssmin = require('cssmin');
-const createArchive = require('./lib/archive.cjs');
+import cssmin from 'cssmin';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const SRC = path.join(ROOT, 'src');
 const TEST = path.join(ROOT, 'test');
@@ -34,8 +32,8 @@ async function write(dest, content) {
 }
 async function bundle(source, minify = false) {
     const result = await esbuild.build({stdin: {contents: await fs.readFile(source, 'utf8'), resolveDir: path.dirname(source), sourcefile: source},
-        bundle: true, format: 'iife', platform: 'browser', target: 'es2017', minify, sourcemap: false, define: {global: 'window'},
-        legalComments: 'none', plugins: [emptyJsdom], write: false});
+        bundle: true, format: 'iife', platform: 'browser', target: 'es2020', minify, sourcemap: false, define: {global: 'window'},
+        legalComments: 'none', logOverride: {'unsupported-regexp': 'error'}, plugins: [emptyJsdom], write: false});
     return result.outputFiles[0].text;
 }
 async function allFiles(pattern, cwd = ROOT) {

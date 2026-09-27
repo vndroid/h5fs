@@ -22,7 +22,11 @@ There are installation ready packages for the latest [releases][release] and
 [dev builds][develop]. But to build **h5fs** yourself either `git clone` or
 download the repository. From within the root folder run the following
 commands to find a fresh zipball in folder `build-node` (tested on linux only,
-requires [`Node.js 22.18–22.x or 24.11+`][node] to be installed).
+requires [`Node.js 24.18+`][node] to be installed).
+JavaScript source uses ES modules (`import`/`export`) and allows ES2024 syntax.
+The build bundles it into a single browser script targeting ES2020 syntax, so
+deployment does not require native module loading. Browsers must support the
+output script's syntax and APIs; esbuild does not polyfill missing APIs.
 
 ~~~sh
 npm ci

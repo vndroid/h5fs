@@ -1,22 +1,24 @@
-require('../view/viewmode');
+import '../view/viewmode.js';
+import '../ext/autorefresh.js';
+import '../ext/contextmenu.js';
+import '../ext/crumb.js';
+import '../ext/custom.js';
+import '../ext/download.js';
+import '../ext/filter.js';
+import '../ext/google-analytics.js';
+import '../ext/info.js';
+import '../ext/l10n.js';
+import '../ext/piwik-analytics.js';
+import '../ext/preview/index.js';
+import '../ext/search.js';
+import '../ext/select.js';
+import '../ext/sort.js';
+import '../ext/thumbnails.js';
+import '../ext/title.js';
+import '../ext/tree.js';
+import location from '../core/location.js';
 
-require('../ext/autorefresh');
-require('../ext/contextmenu');
-require('../ext/crumb');
-require('../ext/custom');
-require('../ext/download');
-require('../ext/filter');
-require('../ext/google-analytics');
-require('../ext/info');
-require('../ext/l10n');
-require('../ext/piwik-analytics');
-require('../ext/preview');
-require('../ext/search');
-require('../ext/select');
-require('../ext/sort');
-require('../ext/thumbnails');
-require('../ext/title');
-require('../ext/tree');
+
 
 const href = global.window.document.location.href;
-require('../core/location').setLocation(href, true);
+location.setLocation(href, true);

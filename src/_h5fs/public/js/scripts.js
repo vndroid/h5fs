@@ -1,1 +1,1 @@
-require('./lib/init');
+import './lib/init.js';

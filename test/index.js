@@ -1,20 +1,23 @@
-if (!global.window) {
-    const JSDOM = require('jsdom').JSDOM;
-    global.window = new JSDOM('').window;
-}
+const run = async () => {
+    if (!global.window) {
+        const {JSDOM} = await import('jsdom');
+        global.window = new JSDOM('').window;
+    }
 
-const {test} = require('scar');
-const {pin_html} = require('./util/pin');
+    const {default: scar} = await import('scar');
+    const {default: pin} = await import('./util/pin.js');
 
-require('./tests/premisses');
-require('./tests/unit/core/event');
-require('./tests/unit/core/format');
-require('./tests/unit/util/naturalCmp');
-require('./tests/unit/util/parsePatten');
-require('./tests/unit/util/sanitizeHtml');
-require('./tests/unit/util/customHtml');
-require('./tests/unit/util/reqlib');
+    await import('./tests/premisses.js');
+    await import('./tests/unit/core/event.js');
+    await import('./tests/unit/core/format.js');
+    await import('./tests/unit/util/naturalCmp.js');
+    await import('./tests/unit/util/parsePatten.js');
+    await import('./tests/unit/util/sanitizeHtml.js');
+    await import('./tests/unit/util/customHtml.js');
 
-pin_html();
+    pin.pin_html();
+    const suite = await scar.test.run({sync: true});
+    if (suite.failed_count) throw new Error(`${suite.failed_count} tests failed`);
+};
 
-test.cli({sync: true});
+export const testRun = run();

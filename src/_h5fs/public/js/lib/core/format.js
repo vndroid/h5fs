@@ -1,4 +1,6 @@
-const {isNum} = require('../util');
+import util from '../util/index.js';
+const {isNum} = util;
+
 
 const decimalMetric = {
     t: 1000.0,
@@ -88,7 +90,7 @@ const formatDate = (millis, format) => {
 };
 
 
-module.exports = {
+export default {
     setDefaultMetric,
     formatSize,
     setDefaultDateFormat,

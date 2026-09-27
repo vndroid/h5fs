@@ -1,4 +1,6 @@
-const {each, dom} = require('./util');
+import util from './util/index.js';
+const {each, dom} = util;
+
 const XHR = global.window.XMLHttpRequest;
 
 const request = data => {
@@ -36,7 +38,7 @@ const formRequest = data => {
     $form.rm();
 };
 
-module.exports = {
+export default {
     request,
     formRequest
 };

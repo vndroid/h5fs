@@ -1,6 +1,8 @@
-const {test, assert} = require('scar');
-const reqlib = require('../../../util/reqlib');
-const {sanitizeHtml} = reqlib('util');
+import scar from 'scar';
+import util from '../../../../src/_h5fs/public/js/lib/util/index.js';
+
+const {test, assert} = scar;
+const {sanitizeHtml} = util;
 
 test('util.sanitizeHtml()', () => {
     assert.equal(typeof sanitizeHtml, 'function', 'is function');

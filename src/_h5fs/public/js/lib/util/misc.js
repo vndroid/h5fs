@@ -16,6 +16,6 @@ const parse_pattern = (sequence, advanced) => {
     }).join('|');
 };
 
-module.exports = {
+export default {
     parsePattern: parse_pattern
 };

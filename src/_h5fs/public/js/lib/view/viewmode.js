@@ -1,10 +1,12 @@
-const {each, dom} = require('../util');
-const event = require('../core/event');
-const resource = require('../core/resource');
-const allsettings = require('../core/settings');
-const sidebar = require('./sidebar');
-const base = require('./base');
-const view = require('./view');
+import util from '../util/index.js';
+import event from '../core/event.js';
+import resource from '../core/resource.js';
+import allsettings from '../core/settings.js';
+import sidebar from './sidebar.js';
+import base from './base.js';
+import view from './view.js';
+const {each, dom} = util;
+
 
 
 const settings = Object.assign({

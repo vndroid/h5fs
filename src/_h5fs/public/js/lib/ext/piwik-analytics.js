@@ -1,6 +1,8 @@
-const {dom, awaitLoad} = require('../util');
-const event = require('../core/event');
-const allsettings = require('../core/settings');
+import util from '../util/index.js';
+import event from '../core/event.js';
+import allsettings from '../core/settings.js';
+const {dom, awaitLoad} = util;
+
 
 const win = global.window;
 const settings = Object.assign({

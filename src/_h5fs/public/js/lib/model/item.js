@@ -1,8 +1,10 @@
-const {keys, each, filter, sortBy, isStr, isNum} = require('../util');
-const server = require('../server');
-const location = require('../core/location');
-const settings = require('../core/settings');
-const types = require('../core/types');
+import util from '../util/index.js';
+import server from '../server.js';
+import location from '../core/location.js';
+import settings from '../core/settings.js';
+import types from '../core/types.js';
+const {keys, each, filter, sortBy, isStr, isNum} = util;
+
 
 const reEndsWithSlash = /\/$/;
 const reSplitPath = /^(.*\/)([^\/]+\/?)$/;
@@ -223,7 +225,7 @@ Item.prototype = {
 };
 
 
-module.exports = {
+export default {
     get: getItem,
     remove: removeItem
 };

@@ -1,8 +1,13 @@
-const {each, values, difference} = require('../util');
-const {request} = require('../server');
-const allsettings = require('./settings');
-const event = require('./event');
-const notification = require('../view/notification');
+import util from '../util/index.js';
+import server from '../server.js';
+import allsettings from './settings.js';
+import event from './event.js';
+import notification from '../view/notification.js';
+// Item and location import each other; keep cross-module access inside functions.
+import Item from '../model/item.js';
+
+const {each, values, difference} = util;
+const {request} = server;
 
 const win = global.window;
 const doc = win.document;
@@ -72,11 +77,10 @@ const encodedHref = href => {
 
 const getDomain = () => doc.domain;
 const getAbsHref = () => absHref;
-const getItem = () => require('../model/item').get(absHref);
+const getItem = () => Item.get(absHref);
 
 const load = () => {
     return request({action: 'get', items: {href: absHref, what: 1}}).then(json => {
-        const Item = require('../model/item');
         const item = Item.get(absHref);
 
         if (json) {
@@ -170,7 +174,7 @@ const onPopState = ev => {
 win.onpopstate = history ? onPopState : null;
 
 
-module.exports = {
+export default {
     forceEncoding,
     getDomain,
     getAbsHref,

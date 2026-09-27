@@ -1,6 +1,8 @@
-const {test, assert, insp} = require('scar');
-const reqlib = require('../../../util/reqlib');
-const {parsePattern} = reqlib('util');
+import scar from 'scar';
+import util from '../../../../src/_h5fs/public/js/lib/util/index.js';
+
+const {test, assert, insp} = scar;
+const {parsePattern} = util;
 
 test('util.parsePattern()', () => {
     assert.equal(typeof parsePattern, 'function', 'is function');

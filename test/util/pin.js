@@ -47,7 +47,7 @@ const restore_html = () => {
     // win.localStorage.clear();
 };
 
-module.exports = {
+export default {
     pin_html,
     restore_html
 };

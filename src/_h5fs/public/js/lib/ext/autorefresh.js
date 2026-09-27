@@ -1,6 +1,7 @@
-const event = require('../core/event');
-const location = require('../core/location');
-const allsettings = require('../core/settings');
+import event from '../core/event.js';
+import location from '../core/location.js';
+import allsettings from '../core/settings.js';
+
 
 const win = global.window;
 const settings = Object.assign({

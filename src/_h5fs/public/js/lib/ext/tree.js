@@ -1,9 +1,11 @@
-const {each, dom, cmp, naturalCmp} = require('../util');
-const event = require('../core/event');
-const location = require('../core/location');
-const resource = require('../core/resource');
-const allsettings = require('../core/settings');
-const store = require('../core/store');
+import util from '../util/index.js';
+import event from '../core/event.js';
+import location from '../core/location.js';
+import resource from '../core/resource.js';
+import allsettings from '../core/settings.js';
+import store from '../core/store.js';
+const {each, dom, cmp, naturalCmp} = util;
+
 
 
 const settings = Object.assign({

@@ -1,9 +1,11 @@
-const {each, dom} = require('../util');
-const server = require('../server');
-const event = require('../core/event');
-const location = require('../core/location');
-const resource = require('../core/resource');
-const allsettings = require('../core/settings');
+import util from '../util/index.js';
+import server from '../server.js';
+import event from '../core/event.js';
+import location from '../core/location.js';
+import resource from '../core/resource.js';
+import allsettings from '../core/settings.js';
+const {each, dom} = util;
+
 
 const settings = Object.assign({
     enabled: false,

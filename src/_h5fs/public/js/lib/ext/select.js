@@ -1,7 +1,9 @@
-const {each, dom} = require('../util');
-const event = require('../core/event');
-const resource = require('../core/resource');
-const allsettings = require('../core/settings');
+import util from '../util/index.js';
+import event from '../core/event.js';
+import resource from '../core/resource.js';
+import allsettings from '../core/settings.js';
+const {each, dom} = util;
+
 
 const doc = global.window.document;
 const settings = Object.assign({

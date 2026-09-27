@@ -1,6 +1,8 @@
-const {dom} = require('../util');
-const config = require('../config');
-const server = require('../server');
+import util from '../util/index.js';
+import config from '../config.js';
+import server from '../server.js';
+const {dom} = util;
+
 
 
 const testsTpl =

@@ -1,8 +1,10 @@
-const {each, isFn, dom, includes, compact} = require('../../util');
-const event = require('../../core/event');
-const resource = require('../../core/resource');
-const allsettings = require('../../core/settings');
-const store = require('../../core/store');
+import util from '../../util/index.js';
+import event from '../../core/event.js';
+import resource from '../../core/resource.js';
+import allsettings from '../../core/settings.js';
+import store from '../../core/store.js';
+const {each, isFn, dom, includes, compact} = util;
+
 
 const win = global.window;
 const settings = Object.assign({
@@ -284,7 +286,7 @@ const init = () => {
         .on('load', updateGui);
 };
 
-module.exports = {
+export default {
     setLabels,
     register,
     get item() {

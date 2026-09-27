@@ -1,6 +1,7 @@
-const {test, assert} = require('scar');
-const reqlib = require('../../../util/reqlib');
-const event = reqlib('core/event');
+import scar from 'scar';
+import event from '../../../../src/_h5fs/public/js/lib/core/event.js';
+
+const {test, assert} = scar;
 
 test('core.event', () => {
     assert.equal(typeof event, 'object', 'is object');

@@ -58,6 +58,6 @@ const natural_cmp = (a, b) => {
 };
 /* eslint-enable */
 
-module.exports = {
+export default {
     naturalCmp: natural_cmp
 };

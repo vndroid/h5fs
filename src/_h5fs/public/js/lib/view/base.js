@@ -1,4 +1,6 @@
-const {dom} = require('../util');
+import util from '../util/index.js';
+const {dom} = util;
+
 
 const SEL_ROOT = 'body';
 const TPL_TOPBAR =
@@ -28,4 +30,4 @@ const init = () => {
     };
 };
 
-module.exports = init();
+export default init();

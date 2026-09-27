@@ -1,4 +1,6 @@
-const {each, filter, hasLength, is, isStr, map, isInstanceOf, toArray} = require('./lo');
+import lo from './lo.js';
+const {each, filter, hasLength, is, isStr, map, isInstanceOf, toArray} = lo;
+
 
 const win = global.window;
 const doc = win.document;
@@ -270,7 +272,7 @@ dom.prototype = {
     }
 };
 
-module.exports = {
+export default {
     awaitReady: await_ready,
     awaitLoad: await_load,
     dom

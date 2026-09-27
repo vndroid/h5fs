@@ -1,11 +1,11 @@
-const {test} = require('node:test');
-const assert = require('node:assert/strict');
-const {execFileSync} = require('node:child_process');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const {pathToFileURL} = require('node:url');
-const buildVersion = require('../scripts/lib/version.cjs');
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+import buildVersion from '../scripts/lib/version.js';
 
 const git = (...args) => execFileSync('git', args, {encoding: 'utf8'}).trim();
 const commit = (repo, message) => git('-C', repo,
