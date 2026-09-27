@@ -28,6 +28,12 @@ The build bundles it into a single browser script targeting ES2020 syntax, so
 deployment does not require native module loading. Browsers must support the
 output script's syntax and APIs; esbuild does not polyfill missing APIs.
 
+Pushing a `vX.X.X` tag (three numeric components) triggers a GitHub Actions
+release only when the tagged commit is in `main` history. The workflow builds
+with the tag version and uploads the ZIP to the matching GitHub Release. Other
+tags are skipped. The tagged commit must contain the workflow; existing older
+tags will not trigger it retroactively.
+
 ~~~sh
 npm ci
 npm run build

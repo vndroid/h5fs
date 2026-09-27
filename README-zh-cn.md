@@ -16,6 +16,11 @@ npm run build
 
 构建完成后，可在 `build-node` 目录中找到 `h5fs-<version>.zip`。
 
+推送形如 `vX.X.X`（三段数字）的标签时，GitHub Actions 会确认该标签指向
+`main` 历史中的提交，再以标签版本号构建并把 ZIP 上传到对应的 GitHub Release。
+其他标签或不属于 `main` 的标签不会发布。标签指向的提交必须包含发布工作流；
+已存在的旧标签不会因新增工作流而自动触发。
+
 如需指定页面和压缩包使用的版本号，在构建命令前设置 `H5FS_VERSION`：
 
 ```sh
